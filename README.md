@@ -39,6 +39,7 @@ solamente en el P.07 y la ficha lo refleja. Las tarjetas muestran la ubicación
   (filtro "solo sin productos"), la pantalla propone productos probables (coincidencia de
   cliente +3, de nombre con la especificación +2), tildás y "Vincular marcados". Se puede quitar
   un vínculo desde la misma pantalla. Los vínculos sugeridos aparecen como "sugerido sin confirmar".
+- **Semáforo del molde** (viene del P.07): 🟢 activo · 🟡 en reparación · ⚪ inactivo · 🔴 baja. En "Vincular por molde" el filtro por defecto muestra los *pendientes* (activos, en reparación y sin clasificar); inactivos y bajas no exigen ficha.
 - Requiere haber corrido `vinculos.sql` en Neon (repo del API, carpeta db).
 
 ## Fotos, edición y control de cambios (compartidos)

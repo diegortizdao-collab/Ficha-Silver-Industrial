@@ -926,6 +926,7 @@ function MoldeP07({family, p07, compartidos}){
             <div className="molde-info">
               <div className="esp">{m.especificacion}</div>
               <div className="meta">Nº control {m.n_control || "—"} · {m.cliente || "sin cliente"}{m.estado ? " · " + m.estado : ""}{m.personal_para_mover ? " · personal p/ mover: " + m.personal_para_mover : ""}</div>
+              {m.ciclo_vida && <div className="meta">Molde: <b>{cvLabel(m)}</b></div>}
               <div className="meta">Último movimiento: {m.actualizado_por} · {fmtFecha(m.actualizado_en)}</div>
               <div>
                 {v.confirmado
@@ -1295,9 +1296,15 @@ function saveNuevos(list){
   try{ localStorage.setItem(NUEVOS_KEY, JSON.stringify(list)); }catch(e){}
 }
 
+const CV_TXT = {ACTIVO:"Activo", EN_REPARACION:"En reparación", INACTIVO:"Inactivo", BAJA:"Baja"};
+const CV_ICON = {ACTIVO:"🟢", EN_REPARACION:"🟡", INACTIVO:"⚪", BAJA:"🔴"};
+const cvLabel = (m)=> m.ciclo_vida ? (CV_ICON[m.ciclo_vida] + " " + CV_TXT[m.ciclo_vida] + (m.ciclo_vida_origen==="sugerido" ? " (sugerido)" : "")) : "Sin clasificar";
+// ¿este molde debería tener productos vinculados? activo, en reparación (vuelve) o todavía sin clasificar
+const cvPendiente = (m)=> !m.ciclo_vida || m.ciclo_vida==="ACTIVO" || m.ciclo_vida==="EN_REPARACION";
 function VinculadorMoldes({p07, families, onClose, showToast}){
   const [q, setQ] = useState("");
   const [soloSin, setSoloSin] = useState(true);
+  const [cvF, setCvF] = useState("pend");
   const [selId, setSelId] = useState(null);
   const [qProd, setQProd] = useState("");
   const [marcados, setMarcados] = useState({});
@@ -1317,10 +1324,14 @@ function VinculadorMoldes({p07, families, onClose, showToast}){
     return p07.moldes.filter(m=>{
       if(m.posicion === "NO") return false; // retirados: baja sin oficializar
       if(soloSin && (porMolde[m.id]||[]).length) return false;
+      if(cvF==="pend" && !cvPendiente(m)) return false;
+      if(cvF==="ACTIVO" && m.ciclo_vida!=="ACTIVO") return false;
+      if(cvF==="SIN" && m.ciclo_vida) return false;
+      if(cvF==="fuera" && cvPendiente(m)) return false;
       if(!nq) return true;
       return normTxt([m.especificacion,m.cliente,m.n_control,m.posicion].join(" ")).includes(nq);
     });
-  },[p07.moldes, q, soloSin, porMolde]);
+  },[p07.moldes, q, soloSin, cvF, porMolde]);
 
   const sel = selId ? moldeById.get(selId) : null;
   const vinculados = sel ? (porMolde[sel.id]||[]).map(v=>({v, f: famById.get(v.familia_id)})).filter(x=>x.f) : [];
@@ -1356,20 +1367,27 @@ function VinculadorMoldes({p07, families, onClose, showToast}){
   };
   const elegir = (id)=>{ setSelId(id); setMarcados({}); setQProd(""); };
 
-  const sinCount = p07.moldes.filter(m=>m.posicion !== "NO" && !(porMolde[m.id]||[]).length).length;
+  const sinCount = p07.moldes.filter(m=>m.posicion !== "NO" && cvPendiente(m) && !(porMolde[m.id]||[]).length).length;
 
   return (
     <div className="overlay" onClick={(e)=>{ if(e.target.classList.contains("overlay")) onClose(); }}>
       <div className="vm-box">
         <div className="vm-head">
           <div><h3>Vincular productos por molde</h3>
-            <div className="sub">Elegí un molde del P.07 y marcá los productos que se fabrican con él. Moldes sin productos: {sinCount}.</div></div>
+            <div className="sub">Elegí un molde del P.07 y marcá los productos que se fabrican con él. Moldes activos o pendientes de clasificar sin productos: {sinCount}.</div></div>
           <button className="pos-edit-btn" style={{marginLeft:"auto"}} onClick={onClose}>Cerrar</button>
         </div>
         <div className="vm-cols">
           <div className="vm-col">
             <div className="vm-tools">
               <input type="search" placeholder="Buscar molde, cliente, Nº control, posición" value={q} onChange={e=>setQ(e.target.value)} />
+              <select value={cvF} onChange={e=>setCvF(e.target.value)} style={{fontSize:12}}>
+                <option value="pend">🟢🟡⚪ Pendientes (activos, en reparación, sin clasificar)</option>
+                <option value="ACTIVO">🟢 Solo activos</option>
+                <option value="SIN">⚪ Solo sin clasificar</option>
+                <option value="fuera">Inactivos y bajas</option>
+                <option value="todos">Todos</option>
+              </select>
               <label style={{fontSize:12,display:"flex",gap:5,alignItems:"center"}}><input type="checkbox" checked={soloSin} onChange={e=>setSoloSin(e.target.checked)} /> solo sin productos</label>
             </div>
             <div className="vm-list">
@@ -1379,7 +1397,7 @@ function VinculadorMoldes({p07, families, onClose, showToast}){
                 return (
                   <button key={m.id} className={"vm-item" + (m.id===selId ? " sel":"")} onClick={()=>elegir(m.id)}>
                     <b className="pos">{m.posicion || "—"}</b>
-                    <span>{(m.especificacion||"").split("\n")[0]}<br/><span className="n">{m.cliente || "sin cliente"} · Nº control {m.n_control || "—"}</span></span>
+                    <span>{(m.especificacion||"").split("\n")[0]}<br/><span className="n">{m.cliente || "sin cliente"} · Nº control {m.n_control || "—"} · {cvLabel(m)}</span></span>
                     <span className={"cnt" + (n ? "" : " cero")}>{n ? n + " prod." : "sin productos"}</span>
                   </button>
                 );
@@ -1392,7 +1410,7 @@ function VinculadorMoldes({p07, families, onClose, showToast}){
               <React.Fragment>
                 <div className="vm-right">
                   <div style={{fontWeight:700}}>{(sel.especificacion||"").split("\n")[0]}</div>
-                  <div className="molde-info"><span className="meta">Ubicación {sel.posicion} · {sel.cliente || "sin cliente"} · Nº control {sel.n_control || "—"}</span></div>
+                  <div className="molde-info"><span className="meta">Ubicación {sel.posicion} · {sel.cliente || "sin cliente"} · Nº control {sel.n_control || "—"} · {cvLabel(sel)}</span></div>
 
                   <h4>Productos vinculados ({vinculados.length})</h4>
                   {vinculados.length === 0 && <div className="molde-empty">Todavía ninguno.</div>}
