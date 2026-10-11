@@ -438,6 +438,30 @@
   .molde-pick .opt span.c{color:var(--ink-soft);font-size:12px;}
   .pos-chip{display:inline-block;margin-top:6px;font-size:11px;font-weight:700;padding:2px 9px;border-radius:12px;background:var(--graphite);color:#fff;}
   .pos-chip.sug{background:#fff;color:var(--graphite);border:1px dashed var(--graphite-2);}
+  .vm-box{background:#fff;border-radius:14px;width:min(1100px,96vw);height:min(86vh,820px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.35);}
+  .vm-head{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap;}
+  .vm-head h3{margin:0;font-size:17px;color:var(--graphite);}
+  .vm-head .sub{font-size:12px;color:var(--ink-soft);}
+  .vm-cols{flex:1;display:grid;grid-template-columns:minmax(260px,38%) 1fr;min-height:0;}
+  .vm-col{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line);}
+  .vm-col:last-child{border-right:0;}
+  .vm-tools{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .vm-tools input[type=search],.vm-tools input[type=text]{flex:1;min-width:140px;padding:7px 10px;border:1px solid var(--line);border-radius:6px;font-size:14px;}
+  .vm-list{overflow:auto;flex:1;padding:6px;}
+  .vm-item{display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:8px;margin-bottom:5px;cursor:pointer;background:#fff;font-size:13px;text-align:left;width:100%;}
+  .vm-item:hover{border-color:var(--sage);}
+  .vm-item.sel{border-color:var(--graphite);background:#EEF0FA;}
+  .vm-item b.pos{background:var(--graphite);color:#fff;border-radius:12px;padding:2px 9px;font-size:12px;min-width:44px;text-align:center;}
+  .vm-item .n{font-size:11px;color:var(--ink-soft);}
+  .vm-item .cnt{margin-left:auto;font-size:11px;font-weight:700;border-radius:10px;padding:2px 8px;background:#E3F2E8;color:var(--sage-deep);white-space:nowrap;}
+  .vm-item .cnt.cero{background:#FFF4D6;color:#8A6200;}
+  .vm-right{padding:12px 14px;overflow:auto;flex:1;}
+  .vm-right h4{margin:10px 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--graphite);}
+  .vm-prod{display:flex;gap:8px;align-items:flex-start;padding:6px 8px;border-bottom:1px dashed var(--line);font-size:13px;}
+  .vm-prod .c{color:var(--ink-soft);font-size:12px;}
+  .vm-prod .otro{font-size:11px;color:#8A6200;}
+  .vm-foot{padding:10px 14px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center;justify-content:flex-end;}
+  @media (max-width:760px){.vm-cols{grid-template-columns:1fr;grid-template-rows:38% 1fr}.vm-col{border-right:0;border-bottom:1px solid var(--line)}}
   .molde-share{font-size:12px;color:var(--ink-soft);border-top:1px dashed var(--line);padding-top:8px;margin-top:6px;}
   .field-value.ro{cursor:default;}
   .cc-table{width:100%;border-collapse:collapse;font-size:12px;}
@@ -805,6 +829,7 @@ function useP07(){
   const link = (fid, moldeId)=>act(n=>p07Call(clave, "/api/vinculos/"+encodeURIComponent(fid), {method:"PUT", body:{nombre:n, molde_id:moldeId}}));
   const confirm = (fid)=>act(n=>p07Call(clave, "/api/vinculos/"+encodeURIComponent(fid)+"/confirmar", {method:"POST", body:{nombre:n}}));
   const subirFoto = (fid, variante, tipo, dataUri)=>act(n=>p07Call(clave, "/api/fotos", {method:"POST", body:{nombre:n, familia_id:fid, variante, tipo, imagen:dataUri}}));
+  const linkMany = (fids, moldeId)=>act(async n=>{ for(const fid of fids){ await p07Call(clave, "/api/vinculos/"+encodeURIComponent(fid), {method:"PUT", body:{nombre:n, molde_id:moldeId}}); } });
   const guardarCampos = (fid, campos, anteriores)=>act(n=>p07Call(clave, "/api/ficha/"+encodeURIComponent(fid), {method:"PATCH", body:{nombre:n, campos, anteriores}}));
   const altaFicha = async (familia)=>{
     const n = needName(); if(!n) return {error:"Falta tu nombre."};
@@ -834,7 +859,7 @@ function useP07(){
     const m = {}; for(const f of (st.ficha||[])) m[f.familia_id] = f; return m;
   },[st.ficha]);
 
-  return {...st, nombre, byFamilia, fotoMap, fichaMap, subirFoto, guardarCampos, altaFicha, cambios, canEdit: st.estado==="ok" && st.rol==="admin", reload, connect, disconnect, link, confirm, unlink, configured: !!P07_API};
+  return {...st, nombre, byFamilia, fotoMap, fichaMap, subirFoto, guardarCampos, altaFicha, cambios, linkMany, canEdit: st.estado==="ok" && st.rol==="admin", reload, connect, disconnect, link, confirm, unlink, configured: !!P07_API};
 }
 
 function fmtFecha(iso){
@@ -1270,6 +1295,144 @@ function saveNuevos(list){
   try{ localStorage.setItem(NUEVOS_KEY, JSON.stringify(list)); }catch(e){}
 }
 
+function VinculadorMoldes({p07, families, onClose, showToast}){
+  const [q, setQ] = useState("");
+  const [soloSin, setSoloSin] = useState(true);
+  const [selId, setSelId] = useState(null);
+  const [qProd, setQProd] = useState("");
+  const [marcados, setMarcados] = useState({});
+  const [busy, setBusy] = useState(false);
+
+  const famById = useMemo(()=>{ const m = new Map(); families.forEach(f=>m.set(f.id, f)); return m; },[families]);
+  const porMolde = useMemo(()=>{
+    const m = {}; for(const v of p07.vinculos){ (m[v.molde_id] = m[v.molde_id] || []).push(v); } return m;
+  },[p07.vinculos]);
+  const porFamilia = useMemo(()=>{
+    const m = {}; for(const v of p07.vinculos){ (m[v.familia_id] = m[v.familia_id] || []).push(v.molde_id); } return m;
+  },[p07.vinculos]);
+  const moldeById = useMemo(()=>{ const m = new Map(); p07.moldes.forEach(x=>m.set(x.id, x)); return m; },[p07.moldes]);
+
+  const moldes = useMemo(()=>{
+    const nq = normTxt(q).trim();
+    return p07.moldes.filter(m=>{
+      if(m.posicion === "NO") return false; // retirados: baja sin oficializar
+      if(soloSin && (porMolde[m.id]||[]).length) return false;
+      if(!nq) return true;
+      return normTxt([m.especificacion,m.cliente,m.n_control,m.posicion].join(" ")).includes(nq);
+    });
+  },[p07.moldes, q, soloSin, porMolde]);
+
+  const sel = selId ? moldeById.get(selId) : null;
+  const vinculados = sel ? (porMolde[sel.id]||[]).map(v=>({v, f: famById.get(v.familia_id)})).filter(x=>x.f) : [];
+
+  const candidatos = useMemo(()=>{
+    if(!sel) return [];
+    const ya = new Set((porMolde[sel.id]||[]).map(v=>v.familia_id));
+    const nq = normTxt(qProd).trim();
+    if(nq){
+      return families.filter(f=>!ya.has(f.id) && normTxt([f.nombre,f.cliente].concat(f.variantes.map(v=>v.codigo)).join(" ")).includes(nq)).slice(0,60);
+    }
+    const mc = tokSet(sel.cliente), me = tokSet(sel.especificacion);
+    return families.filter(f=>!ya.has(f.id)).map(f=>{
+      const fc = tokSet(f.cliente), fn = tokSet(f.nombre);
+      let sc = 0; fc.forEach(t=>{ if(mc.has(t)) sc += 3; }); fn.forEach(t=>{ if(me.has(t)) sc += 2; });
+      return {f, sc};
+    }).filter(x=>x.sc>0).sort((a,b)=>b.sc-a.sc).slice(0,25).map(x=>x.f);
+  },[sel, qProd, families, porMolde]);
+
+  const elegidos = Object.keys(marcados).filter(k=>marcados[k]);
+  const vincular = async ()=>{
+    if(!sel || !elegidos.length) return;
+    setBusy(true);
+    const err = await p07.linkMany(elegidos, sel.id);
+    setBusy(false);
+    if(err){ showToast("No se pudo vincular: " + err); return; }
+    showToast(`Vinculados ${elegidos.length} producto(s) al molde ${sel.n_control || ""}`);
+    setMarcados({});
+  };
+  const desvincular = async (fid)=>{
+    setBusy(true); const err = await p07.unlink(fid, sel.id); setBusy(false);
+    if(err) showToast("No se pudo desvincular: " + err);
+  };
+  const elegir = (id)=>{ setSelId(id); setMarcados({}); setQProd(""); };
+
+  const sinCount = p07.moldes.filter(m=>m.posicion !== "NO" && !(porMolde[m.id]||[]).length).length;
+
+  return (
+    <div className="overlay" onClick={(e)=>{ if(e.target.classList.contains("overlay")) onClose(); }}>
+      <div className="vm-box">
+        <div className="vm-head">
+          <div><h3>Vincular productos por molde</h3>
+            <div className="sub">Elegí un molde del P.07 y marcá los productos que se fabrican con él. Moldes sin productos: {sinCount}.</div></div>
+          <button className="pos-edit-btn" style={{marginLeft:"auto"}} onClick={onClose}>Cerrar</button>
+        </div>
+        <div className="vm-cols">
+          <div className="vm-col">
+            <div className="vm-tools">
+              <input type="search" placeholder="Buscar molde, cliente, Nº control, posición" value={q} onChange={e=>setQ(e.target.value)} />
+              <label style={{fontSize:12,display:"flex",gap:5,alignItems:"center"}}><input type="checkbox" checked={soloSin} onChange={e=>setSoloSin(e.target.checked)} /> solo sin productos</label>
+            </div>
+            <div className="vm-list">
+              {moldes.length === 0 && <div className="molde-empty">No hay moldes con ese criterio.</div>}
+              {moldes.slice(0,300).map(m=>{
+                const n = (porMolde[m.id]||[]).length;
+                return (
+                  <button key={m.id} className={"vm-item" + (m.id===selId ? " sel":"")} onClick={()=>elegir(m.id)}>
+                    <b className="pos">{m.posicion || "—"}</b>
+                    <span>{(m.especificacion||"").split("\n")[0]}<br/><span className="n">{m.cliente || "sin cliente"} · Nº control {m.n_control || "—"}</span></span>
+                    <span className={"cnt" + (n ? "" : " cero")}>{n ? n + " prod." : "sin productos"}</span>
+                  </button>
+                );
+              })}
+              {moldes.length > 300 && <div className="molde-empty">Mostrando 300 de {moldes.length}: afiná la búsqueda.</div>}
+            </div>
+          </div>
+          <div className="vm-col">
+            {!sel ? <div className="vm-right"><div className="molde-empty">Elegí un molde de la lista.</div></div> : (
+              <React.Fragment>
+                <div className="vm-right">
+                  <div style={{fontWeight:700}}>{(sel.especificacion||"").split("\n")[0]}</div>
+                  <div className="molde-info"><span className="meta">Ubicación {sel.posicion} · {sel.cliente || "sin cliente"} · Nº control {sel.n_control || "—"}</span></div>
+
+                  <h4>Productos vinculados ({vinculados.length})</h4>
+                  {vinculados.length === 0 && <div className="molde-empty">Todavía ninguno.</div>}
+                  {vinculados.map(({v,f})=>(
+                    <div className="vm-prod" key={f.id}>
+                      <div style={{flex:1}}>{f.nombre}<div className="c">{f.cliente || "sin cliente"}{v.confirmado ? "" : " · sugerido sin confirmar"}</div></div>
+                      <button className="pos-edit-btn" disabled={busy} onClick={()=>desvincular(f.id)}>Quitar</button>
+                    </div>
+                  ))}
+
+                  <h4>{qProd.trim() ? "Resultados de la búsqueda" : "Productos probables (mismo cliente o nombre parecido)"}</h4>
+                  <div className="vm-tools" style={{padding:"0 0 8px",border:0}}>
+                    <input type="text" placeholder="Buscar otro producto por nombre, cliente o código" value={qProd} onChange={e=>setQProd(e.target.value)} />
+                  </div>
+                  {candidatos.length === 0 && <div className="molde-empty">Sin coincidencias. Probá buscando por nombre, cliente o código.</div>}
+                  {candidatos.map(f=>{
+                    const otros = (porFamilia[f.id]||[]).filter(id=>id!==sel.id).map(id=>moldeById.get(id)).filter(Boolean);
+                    return (
+                      <label className="vm-prod" key={f.id} style={{cursor:"pointer"}}>
+                        <input type="checkbox" checked={!!marcados[f.id]} onChange={e=>setMarcados(prev=>({...prev,[f.id]:e.target.checked}))} />
+                        <div style={{flex:1}}>{f.nombre}<div className="c">{f.cliente || "sin cliente"} · cód. {f.variantes[0] && f.variantes[0].codigo}</div>
+                          {otros.length > 0 && <div className="otro">ya vinculado al molde en {otros.map(o=>o.posicion).join(", ")}</div>}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+                <div className="vm-foot">
+                  <span className="sub" style={{fontSize:12,color:"var(--ink-soft)"}}>{elegidos.length} marcado(s)</span>
+                  <button className="btn-primary" disabled={busy || !elegidos.length} onClick={vincular}>Vincular marcados a este molde</button>
+                </div>
+              </React.Fragment>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ConnectDialog({p07, onClose}){
   const [clave, setClave] = useState("");
   const [nom, setNom] = useState(p07.nombre || "");
@@ -1303,6 +1466,7 @@ function App(){
   const [toast, setToast] = useState(null);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [connectOpen, setConnectOpen] = useState(false);
+  const [vincularOpen, setVincularOpen] = useState(false);
   const [localCount, setLocalCount] = useState(0);
   const p07 = useP07();
 
@@ -1431,6 +1595,7 @@ function App(){
         {p07.configured && (p07.estado === "ok"
           ? <button className="conn-chip on" title="Desconectar" onClick={()=>p07.disconnect()}>● {p07.rol === "admin" ? "Administrador" : "Planta"} · salir</button>
           : <button className="conn-chip" onClick={()=>setConnectOpen(true)}>Conectar con el P.07</button>)}
+        {p07.canEdit && <button className="conn-chip on" onClick={()=>setVincularOpen(true)} title="Asociar productos a los moldes del P.07">Vincular por molde</button>}
         {localCount > 0 && <button className="conn-chip on" onClick={subirLocales} title="Hay ediciones guardadas solo en este navegador">Subir {localCount} cambio(s) locales</button>}
         <div className="header-identity">
           <div className="name">Mgter. Diego Ortiz</div>
@@ -1482,6 +1647,8 @@ function App(){
           onLogoUpload={onLogoUpload}
           onPrint={onPrint}
         />}
+
+      {vincularOpen && <VinculadorMoldes p07={p07} families={families} onClose={()=>setVincularOpen(false)} showToast={showToast} />}
 
       {connectOpen && <ConnectDialog p07={p07} onClose={()=>setConnectOpen(false)} />}
 

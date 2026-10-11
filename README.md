@@ -35,6 +35,10 @@ solamente en el P.07 y la ficha lo refleja. Las tarjetas muestran la ubicación
   confirmar y desvincular.
 - `config.js` trae API_URL (Worker del P.07) y P07_URL.
 - El campo viejo "Molde (dato de la planilla anterior)" se conserva como referencia.
+- **Vincular por molde** (solo administrador, chip en el encabezado): elegís un molde del P.07
+  (filtro "solo sin productos"), la pantalla propone productos probables (coincidencia de
+  cliente +3, de nombre con la especificación +2), tildás y "Vincular marcados". Se puede quitar
+  un vínculo desde la misma pantalla. Los vínculos sugeridos aparecen como "sugerido sin confirmar".
 - Requiere haber corrido `vinculos.sql` en Neon (repo del API, carpeta db).
 
 ## Fotos, edición y control de cambios (compartidos)
