@@ -438,6 +438,14 @@
   .molde-pick .opt span.c{color:var(--ink-soft);font-size:12px;}
   .pos-chip{display:inline-block;margin-top:6px;font-size:11px;font-weight:700;padding:2px 9px;border-radius:12px;background:var(--graphite);color:#fff;}
   .pos-chip.sug{background:#fff;color:var(--graphite);border:1px dashed var(--graphite-2);}
+  .molde-share{font-size:12px;color:var(--ink-soft);border-top:1px dashed var(--line);padding-top:8px;margin-top:6px;}
+  .field-value.ro{cursor:default;}
+  .cc-table{width:100%;border-collapse:collapse;font-size:12px;}
+  .cc-table th,.cc-table td{border-bottom:1px solid var(--line);padding:5px 6px;text-align:left;vertical-align:top;}
+  .cc-table th{color:var(--ink-soft);font-weight:700;font-size:11px;text-transform:uppercase;}
+  .ficha-actions{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 10px;}
+  .conn-chip{font-size:12px;border:1px solid rgba(255,255,255,.35);color:#fff;background:transparent;border-radius:16px;padding:6px 12px;cursor:pointer;}
+  .conn-chip.on{background:rgba(255,255,255,.14);}
   .credit{margin:36px auto 0;text-align:center;font-size:12px;color:var(--ink-soft);}
 
   .variants-scroll{
@@ -656,19 +664,19 @@ function resizeImageFile(file, maxDim, quality){
   });
 }
 
-function mergeFamily(base, overrides, fotoMap){
-  const ov = overrides[base.id] || {};
+function mergeFamily(base, fichaMap, fotoMap){
   const fm = fotoMap || {};
-  const variantFotos = ov.variantFotos || {};
-  // la foto compartida (servidor) tiene prioridad sobre la guardada solo en este navegador
+  const sv = (fichaMap && fichaMap[base.id] && fichaMap[base.id].datos) || {};
   const variantes = base.variantes.map(v => {
     const srv = fm[base.id + "|" + v.codigo + "|producto"];
-    const loc = variantFotos[v.codigo];
-    return (srv || loc) ? {...v, foto: srv || loc} : v;
+    return srv ? {...v, foto: srv} : v;
   });
-  const {variantFotos: _drop, ...rest} = ov;
+  const {_nueva, ...campos} = sv;
   const logoSrv = fm[base.id + "||logo"];
-  return {...base, ...rest, ...(logoSrv ? {logo: logoSrv} : {}), variantes};
+  return {...base, ...campos, ...(logoSrv ? {logo: logoSrv} : {}), variantes};
+}
+function familiaNueva(id, datos){
+  return {id, ...FAMILIA_VACIA, nombre:"", cliente:"", variantes:[{codigo:"-", codigoCliente:"-", color:"", foto:null}], ...datos, _nueva:undefined};
 }
 
 function fmtDate(iso){
@@ -678,23 +686,26 @@ function fmtDate(iso){
   return `${pad(d.getDate())}/${pad(d.getMonth()+1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function EditableField({label, value, onSave, placeholder}){
+function EditableField({label, value, onSave, canEdit, multiline}){
   const ref = useRef(null);
-  const handleBlur = () => {
+  const handleBlur = async () => {
+    if(!canEdit) return;
     const text = ref.current.innerText.trim();
     if(text !== (value||"")){
-      onSave(text);
+      const err = await onSave(text);
+      if(err && ref.current) ref.current.innerText = value || "";
     }
   };
   return (
     <div className="field">
       <div className="field-label">{label}</div>
       <div
-        className="field-value"
-        contentEditable
+        className={"field-value" + (canEdit ? "" : " ro")}
+        contentEditable={!!canEdit}
         suppressContentEditableWarning
         onBlur={handleBlur}
         ref={ref}
+        title={canEdit ? "" : "Solo el administrador edita la ficha"}
       >{value || ""}</div>
     </div>
   );
@@ -722,6 +733,25 @@ async function p07Call(clave, path, opts){
   return j;
 }
 
+// Campos de la ficha que se guardan en Neon (los mismos que acepta el Worker)
+const CAMPO_LABEL = {
+  nombre:"Nombre del producto", cliente:"Cliente", material:"Material", materialMolde:"Material de molde",
+  cavidades:"Cavidades", pesoUnitario:"Peso unitario (g)", tipo:"Tipo (AUTO/SEMI)", ciclo:"Ciclo (seg)",
+  medidaCaja:"Medida de caja", unidXCaja:"Unid. x caja", medidaBolsa:"Medida de bolsa", unidXBolsa:"Unid. x bolsa",
+  tipoDosificacion:"Tipo de dosificación", codigoDosificacion:"Código dosificación", dosificacionPct:"Dosificación %",
+  grXKg:"Gr x Kg", grXBolsa:"Gr x Bolsa", inserto:"Inserto", observaciones:"Observaciones", descripcion:"Descripción",
+  clienteProveeMP:"Cliente provee materia prima", clienteProveeInsumos:"Cliente provee otros insumos",
+  planos:"Planos", legislacion:"Legislación especial", muestraPatron:"Muestra patrón aprobada por el cliente",
+  controlDimensional:"Control dimensional / tolerancias", controlFuncional:"Control funcional / atributos",
+  procedimientosEspeciales:"Procedimientos especiales requeridos", "(alta de ficha)":"Alta de la ficha",
+};
+const CAMPOS_FICHA = Object.keys(CAMPO_LABEL).filter(k=>k!=="(alta de ficha)");
+const FAMILIA_VACIA = {
+  logo:null, material:"", molde:"", cavidades:"", pesoUnitario:"", tipo:"", ciclo:"",
+  medidaCaja:"", unidXCaja:"", medidaBolsa:"", unidXBolsa:"", tipoDosificacion:"", codigoDosificacion:"",
+  dosificacionPct:"", grXKg:"", grXBolsa:"", inserto:"", observaciones:"", descripcion:"", posicion:"",
+};
+
 function normTxt(s){ return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,""); }
 function tokSet(s){ return new Set(normTxt(s).replace(/[^a-z0-9 ]/g," ").split(/\s+/).filter(t=>t.length>1)); }
 
@@ -729,14 +759,14 @@ function tokSet(s){ return new Set(normTxt(s).replace(/[^a-z0-9 ]/g," ").split(/
 function useP07(){
   const [clave, setClave] = useState(P07_LS.get("p07_clave"));
   const [nombre, setNombre] = useState(P07_LS.get("p07_nombre"));
-  const [st, setSt] = useState({estado: (P07_API && clave) ? "cargando" : "sin_clave", rol:null, moldes:[], vinculos:[], fotos:[], ultima:null, error:""});
+  const [st, setSt] = useState({estado: (P07_API && clave) ? "cargando" : "sin_clave", rol:null, moldes:[], vinculos:[], fotos:[], ficha:[], ultima:null, error:""});
 
   const reload = useCallback(async (k)=>{
     const c = k || clave;
     if(!P07_API || !c) return;
     try{
-      const [d, v, f] = await Promise.all([p07Call(c,"/api/p07"), p07Call(c,"/api/vinculos"), p07Call(c,"/api/fotos").catch(()=>({fotos:[]}))]);
-      setSt({estado:"ok", rol:d.rol, moldes:d.moldes, vinculos:v.vinculos, fotos:f.fotos, ultima:new Date(), error:""});
+      const [d, v, f, fd] = await Promise.all([p07Call(c,"/api/p07"), p07Call(c,"/api/vinculos"), p07Call(c,"/api/fotos").catch(()=>({fotos:[]})), p07Call(c,"/api/ficha").catch(()=>({datos:[]}))]);
+      setSt({estado:"ok", rol:d.rol, moldes:d.moldes, vinculos:v.vinculos, fotos:f.fotos, ficha:fd.datos, ultima:new Date(), error:""});
     }catch(e){
       if(e.status===401 || e.status===403){ P07_LS.del("p07_clave"); setClave(""); setSt(s=>({...s, estado:"sin_clave", error:"Clave incorrecta."})); }
       else setSt(s=>({...s, estado: s.moldes.length ? "ok" : "error", error:e.message, offline:true}));
@@ -761,7 +791,7 @@ function useP07(){
       return "";
     }catch(e){ return e.status===401||e.status===403 ? "Clave incorrecta." : e.message; }
   };
-  const disconnect = ()=>{ P07_LS.del("p07_clave"); setClave(""); setSt({estado:"sin_clave", rol:null, moldes:[], vinculos:[], fotos:[], ultima:null, error:""}); };
+  const disconnect = ()=>{ P07_LS.del("p07_clave"); setClave(""); setSt({estado:"sin_clave", rol:null, moldes:[], vinculos:[], fotos:[], ficha:[], ultima:null, error:""}); };
 
   const needName = ()=>{
     let n = nombre;
@@ -775,6 +805,13 @@ function useP07(){
   const link = (fid, moldeId)=>act(n=>p07Call(clave, "/api/vinculos/"+encodeURIComponent(fid), {method:"PUT", body:{nombre:n, molde_id:moldeId}}));
   const confirm = (fid)=>act(n=>p07Call(clave, "/api/vinculos/"+encodeURIComponent(fid)+"/confirmar", {method:"POST", body:{nombre:n}}));
   const subirFoto = (fid, variante, tipo, dataUri)=>act(n=>p07Call(clave, "/api/fotos", {method:"POST", body:{nombre:n, familia_id:fid, variante, tipo, imagen:dataUri}}));
+  const guardarCampos = (fid, campos, anteriores)=>act(n=>p07Call(clave, "/api/ficha/"+encodeURIComponent(fid), {method:"PATCH", body:{nombre:n, campos, anteriores}}));
+  const altaFicha = async (familia)=>{
+    const n = needName(); if(!n) return {error:"Falta tu nombre."};
+    try{ const r = await p07Call(clave, "/api/ficha", {method:"POST", body:{nombre:n, familia}}); await reload(); return {id:r.familia_id}; }
+    catch(e){ return {error:e.message}; }
+  };
+  const cambios = async (fid)=>{ try{ return (await p07Call(clave, "/api/ficha/"+encodeURIComponent(fid)+"/cambios")).cambios; }catch(e){ return []; } };
   const unlink = (fid, moldeId)=>act(()=>p07Call(clave, "/api/vinculos/"+encodeURIComponent(fid)+"/"+moldeId, {method:"DELETE"}));
 
   const byFamilia = useMemo(()=>{
@@ -793,7 +830,11 @@ function useP07(){
     return m;
   },[st.fotos]);
 
-  return {...st, nombre, byFamilia, fotoMap, subirFoto, reload, connect, disconnect, link, confirm, unlink, configured: !!P07_API};
+  const fichaMap = useMemo(()=>{
+    const m = {}; for(const f of (st.ficha||[])) m[f.familia_id] = f; return m;
+  },[st.ficha]);
+
+  return {...st, nombre, byFamilia, fotoMap, fichaMap, subirFoto, guardarCampos, altaFicha, cambios, canEdit: st.estado==="ok" && st.rol==="admin", reload, connect, disconnect, link, confirm, unlink, configured: !!P07_API};
 }
 
 function fmtFecha(iso){
@@ -802,7 +843,7 @@ function fmtFecha(iso){
   return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${String(d.getFullYear()).slice(2)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function MoldeP07({family, p07}){
+function MoldeP07({family, p07, compartidos}){
   const [picking, setPicking] = useState(false);
   const [q, setQ] = useState("");
   const [claveIn, setClaveIn] = useState("");
@@ -905,17 +946,150 @@ function MoldeP07({family, p07}){
         {p07.estado !== "ok" && p07.configured && <span className="live off"><i></i>sin conexión</span>}
       </div>
       {body}
-      {family.posicion && <div className="molde-empty" style={{paddingTop:6}}>Dato local anterior (cargado a mano en este navegador): {family.posicion}</div>}
+      {compartidos && compartidos.length > 0 &&
+        <div className="molde-share">También se fabrican con este molde: {compartidos.slice(0,8).join(" · ")}{compartidos.length > 8 ? " · +" + (compartidos.length-8) + " más" : ""}</div>}
     </div>
   );
 }
 
-function FichaModal({family, p07, onClose, onFieldSave, onDescSave, onVariantPhoto, onLogoUpload}){
+function escH(x){ return String(x==null?"":x).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function abs(u){ try{ return new URL(u, document.baseURI).href; }catch(e){ return u; } }
+
+// Ficha de producto imprimible (registro Q.12). Se arma con los datos vigentes del sistema: ficha, P.07 y control de cambios.
+// Revisión vigente del formato Q.12 (la REV del encabezado es la del documento, como en el resto del SGC)
+const Q12_REV = "03", Q12_FECHA = "11/10/2026";
+
+function imprimirQ12({family, variant, links, compartidos, cambios, usuario}){
+  const pad = n=>String(n).padStart(2,"0");
+  const f2 = (d)=>`${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+  const ahora = new Date();
+  const cc = (cambios||[]);
+  const ultima = cc.length ? new Date(cc[0].en) : null;
+  const v = (x)=> (x===undefined||x===null||String(x).trim()==="") ? '<span class="nd">—</span>' : escH(x).replace(/\n/g,"<br>");
+  const celda = (label, val, cls)=>`<td class="${cls||""}"><div class="l">${escH(label)}</div><div class="v">${v(val)}</div></td>`;
+  const fila = (...c)=>`<tr>${c.join("")}</tr>`;
+  const foto = variant.foto ? abs(resolveAsset(variant.foto)) : "";
+  const logoSilver = abs(resolveAsset("silver-logo.png"));
+  const logoCli = family.logo ? abs(resolveAsset(family.logo)) : "";
+
+  const moldes = links.length
+    ? links.map(({v:vin,m})=>fila(
+        `<td class="pos"><div class="l">Ubicación</div><div class="big">${escH(m.posicion||"—")}</div></td>`,
+        celda("Nº de control", m.n_control),
+        `<td colspan="2"><div class="l">Molde (especificación)</div><div class="v">${v(m.especificacion)}</div></td>`,
+        celda("Estado", m.estado)
+      )).join("")
+    : fila(`<td colspan="5" class="nd">Sin molde vinculado en el P.07.</td>`);
+
+  const ccRows = cc.slice(0,10).map(c=>`<tr><td>${f2(new Date(c.en))}</td><td>${escH(CAMPO_LABEL[c.campo]||c.campo)}</td><td>${escH((c.anterior||"—").slice(0,70))}</td><td>${escH((c.nuevo||"—").slice(0,70))}</td><td>${escH(c.por)}</td></tr>`).join("")
+    || `<tr><td colspan="5" class="nd">Sin cambios registrados.</td></tr>`;
+
+  const variantes = family.variantes.map(x=>escH(x.codigo + (x.color ? " (" + x.color + ")" : ""))).join(" · ");
+
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Q.12 Ficha de producto - ${escH(family.nombre)}</title>
+<style>
+@page{size:A4;margin:10mm}
+*{box-sizing:border-box}
+body{font-family:Arial,Helvetica,sans-serif;font-size:10pt;color:#000;margin:0}
+.pg{border:2px solid #000;padding:6mm;min-height:275mm;position:relative}
+table{width:100%;border-collapse:collapse}
+td,th{border:1px solid #000;padding:3px 5px;vertical-align:top}
+.hd td{vertical-align:middle}
+.hd .t{text-align:center;font-size:15pt;font-weight:bold}
+.hd .n{text-align:center;font-size:10.5pt}
+.hd img{max-height:16mm;max-width:38mm;display:block;margin:auto}
+.hd .m{font-size:9pt;width:34mm}
+h2{font-size:10pt;margin:9px 0 3px;text-transform:uppercase}
+.l{font-size:7.5pt;color:#444;text-transform:uppercase;letter-spacing:.02em}
+.v{font-size:10pt;font-weight:bold;min-height:12pt}
+.nd{color:#888;font-weight:normal}
+.pos{width:26mm;text-align:center}
+.big{font-size:17pt;font-weight:bold}
+.foto{width:62mm;text-align:center;vertical-align:middle}
+.foto img{max-width:100%;max-height:52mm}
+.desc{min-height:22mm;white-space:pre-wrap}
+.cc th{font-size:8pt;background:#eee;text-align:left}
+.cc td{font-size:8.5pt}
+.ft{position:absolute;left:6mm;right:6mm;bottom:5mm;font-size:8pt;color:#333}
+.ft .ap{display:flex;justify-content:space-between;border-top:1px solid #000;padding-top:3px;font-size:10pt;color:#000}
+</style></head><body><div class="pg">
+<table class="hd"><tr>
+<td rowspan="2" style="width:42mm"><img src="${logoSilver}"></td>
+<td rowspan="2"><div class="t">FICHA DE PRODUCTO</div><div class="n">${escH(family.nombre)}</div></td>
+<td class="m">FECHA: ${Q12_FECHA}</td></tr>
+<tr><td class="m">REV: ${Q12_REV} &nbsp;&nbsp; COD: Q.12</td></tr></table>
+
+<h2>Datos del producto</h2>
+<table>
+<tr><td class="foto" rowspan="5">${foto ? `<img src="${foto}">` : '<span class="nd">Sin foto</span>'}${logoCli ? `<div style="margin-top:4px"><img src="${logoCli}" style="max-height:12mm;max-width:40mm"></div>` : ""}</td>
+${celda("Cliente", family.cliente)}${celda("Código Silver", variant.codigo)}${celda("Código del cliente", variant.codigoCliente)}</tr>
+${fila(celda("Material", family.material), celda("Material de molde", family.materialMolde), celda("Color / variante", variant.color))}
+${fila(celda("Nº de cavidades", family.cavidades), celda("Peso unitario (g, +2% scrap)", family.pesoUnitario), celda("Ciclo (seg)", family.ciclo))}
+${fila(celda("Tipo (AUTO/SEMI)", family.tipo), celda("Inserto", family.inserto), celda("Variantes de la familia", variantes))}
+${fila(celda("Embalaje", [family.medidaCaja && "Caja " + family.medidaCaja + (family.unidXCaja ? " x " + family.unidXCaja : ""), family.medidaBolsa && "Bolsa " + family.medidaBolsa + (family.unidXBolsa ? " x " + family.unidXBolsa : "")].filter(Boolean).join(" · ")), celda("Dosificación", [family.tipoDosificacion, family.codigoDosificacion && "cód. " + family.codigoDosificacion, family.dosificacionPct && family.dosificacionPct + " %"].filter(Boolean).join(" · ")), celda("Gr x Kg / Gr x Bolsa", [family.grXKg, family.grXBolsa].filter(Boolean).join(" / ")))}
+</table>
+
+<h2>Molde y ubicación (P.07 — dato vigente al ${f2(ahora)})</h2>
+<table>${moldes}</table>
+${compartidos && compartidos.length ? `<div style="font-size:8.5pt;margin-top:3px">También se fabrican con este molde: ${escH(compartidos.slice(0,12).join(" · "))}${compartidos.length>12 ? " · +" + (compartidos.length-12) + " más" : ""}</div>` : ""}
+
+<h2>Requisitos del cliente</h2>
+<table>
+${fila(celda("Cliente provee materia prima", family.clienteProveeMP), celda("Cliente provee otros insumos", family.clienteProveeInsumos), celda("Planos", family.planos))}
+${fila(celda("Legislación especial", family.legislacion), celda("Muestra patrón aprobada por el cliente", family.muestraPatron), celda("Observaciones", family.observaciones))}
+</table>
+
+<h2>Controles</h2>
+<table>
+${fila(celda("Control dimensional / tolerancias", family.controlDimensional), celda("Control funcional / atributos", family.controlFuncional))}
+${fila(`<td colspan="2"><div class="l">Procedimientos especiales requeridos</div><div class="v">${v(family.procedimientosEspeciales)}</div></td>`)}
+</table>
+
+<h2>Descripción del producto y funcionalidad</h2>
+<table><tr><td class="desc">${v(family.descripcion)}</td></tr></table>
+
+<h2>Control de cambios de la ficha${ultima ? " (última actualización: " + f2(ultima) + " · " + cc.length + " cambio(s) registrados)" : ""}</h2>
+<table class="cc"><tr><th>Fecha</th><th>Campo</th><th>Antes</th><th>Después</th><th>Por</th></tr>${ccRows}</table>
+
+<div class="ft">Impreso el ${f2(ahora)} ${pad(ahora.getHours())}:${pad(ahora.getMinutes())}${usuario ? " por " + escH(usuario) : ""} desde el sistema de Ficha Técnica. Copia no controlada: la versión vigente es la del sistema.
+<div class="ap"><span>APROBO:</span><span>HOJA 1 DE 1</span></div></div>
+</div>
+<script>
+(function(){var imgs=[].slice.call(document.images),n=imgs.length;function go(){setTimeout(function(){window.print()},200)}
+if(!n){go();return}var c=0;imgs.forEach(function(i){if(i.complete){if(++c===n)go()}else{i.onload=i.onerror=function(){if(++c===n)go()}}})})();
+<\/script></body></html>`;
+  const url = URL.createObjectURL(new Blob([html], {type:"text/html;charset=utf-8"}));
+  const w = window.open(url, "_blank");
+  if(!w){ alert("El navegador bloqueó la ventana de impresión. Permití las ventanas emergentes para este sitio."); return; }
+  setTimeout(()=>URL.revokeObjectURL(url), 120000);
+}
+
+function CambiosTabla({cambios}){
+  if(!cambios) return <div className="molde-empty">Cargando…</div>;
+  if(!cambios.length) return <div className="molde-empty">Sin cambios registrados todavía.</div>;
+  return (
+    <table className="cc-table">
+      <thead><tr><th>Fecha</th><th>Campo</th><th>Antes</th><th>Después</th><th>Por</th></tr></thead>
+      <tbody>
+        {cambios.slice(0,30).map((c,i)=>(
+          <tr key={i}>
+            <td>{fmtFecha(c.en)}</td><td>{CAMPO_LABEL[c.campo] || c.campo}</td>
+            <td>{(c.anterior||"—").slice(0,80)}</td><td>{(c.nuevo||"—").slice(0,80)}</td><td>{c.por}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function FichaModal({family, p07, famNombres, onClose, onFieldSave, onVariantPhoto, onLogoUpload, onPrint}){
   const [activeVariant, setActiveVariant] = useState(0);
+  const [cambios, setCambios] = useState(null);
   const variant = family.variantes[activeVariant] || family.variantes[0];
   const descRef = useRef(null);
   const photoInputRef = useRef(null);
   const logoInputRef = useRef(null);
+  const canEdit = p07.canEdit;
 
   useEffect(()=>{
     const onKey = e => { if(e.key === "Escape") onClose(); };
@@ -923,7 +1097,16 @@ function FichaModal({family, p07, onClose, onFieldSave, onDescSave, onVariantPho
     return ()=>window.removeEventListener("keydown", onKey);
   },[onClose]);
 
-  const save = (field) => (val) => onFieldSave(family.id, field, val);
+  useEffect(()=>{
+    let vivo = true;
+    setCambios(null);
+    if(p07.estado === "ok") p07.cambios(family.id).then(c=>{ if(vivo) setCambios(c); });
+    else setCambios([]);
+    return ()=>{ vivo = false; };
+  },[family.id, p07.estado, (p07.ficha||[]).length, p07.ultima && p07.ultima.getTime()]);
+
+  const save = (field) => (val) => onFieldSave(family.id, field, val, family[field]);
+  const campo = (campoKey) => <EditableField key={campoKey} label={CAMPO_LABEL[campoKey]} value={family[campoKey]} canEdit={canEdit} onSave={save(campoKey)} />;
 
   const handlePhotoPick = async (e) => {
     const file = e.target.files && e.target.files[0];
@@ -968,6 +1151,12 @@ function FichaModal({family, p07, onClose, onFieldSave, onDescSave, onVariantPho
         </div>
 
         <div className="ficha-body">
+          <div className="ficha-actions">
+            <button className="pos-edit-btn" onClick={()=>onPrint(family, variant, cambios)}>🖨 Imprimir ficha (Q.12)</button>
+            {p07.estado === "ok" && !canEdit && <span className="molde-empty" style={{padding:0,alignSelf:"center"}}>Vista de solo lectura: la ficha la edita el administrador.</span>}
+            {p07.estado !== "ok" && <span className="molde-empty" style={{padding:0,alignSelf:"center"}}>Conectate al P.07 (arriba o en el bloque de abajo) para ver ubicaciones, fotos y editar.</span>}
+          </div>
+
           <div className="id-row">
             <div className="id-field">
               <div className="id-label">Código del cliente</div>
@@ -998,41 +1187,44 @@ function FichaModal({family, p07, onClose, onFieldSave, onDescSave, onVariantPho
 
           <div className="section-title">Ficha técnica</div>
           <div className="core-grid">
-            <EditableField label="Material" value={family.material} onSave={save("material")} />
-            <EditableField label="Molde (dato de la planilla anterior)" value={family.molde} onSave={save("molde")} />
-            <EditableField label="Cavidades" value={family.cavidades} onSave={save("cavidades")} />
-            <EditableField label="Peso unitario (g, +2% scrap)" value={family.pesoUnitario} onSave={save("pesoUnitario")} />
-            <EditableField label="Tipo (AUTO/SEMI)" value={family.tipo} onSave={save("tipo")} />
-            <EditableField label="Ciclo (seg)" value={family.ciclo} onSave={save("ciclo")} />
+            {["material","materialMolde","cavidades","pesoUnitario","tipo","ciclo"].map(campo)}
           </div>
 
           <div className="core-grid" style={{marginTop:4}}>
-            <MoldeP07 family={family} p07={p07} />
+            <MoldeP07 family={family} p07={p07} compartidos={famNombres} />
           </div>
 
-          <div className="section-title">Descripción del producto</div>
+          <div className="section-title">Descripción del producto y funcionalidad</div>
           <div
-            className="desc-box"
-            contentEditable
+            className={"desc-box" + (canEdit ? "" : " ro")}
+            contentEditable={canEdit}
             suppressContentEditableWarning
-            data-ph="Sin descripción cargada — click para agregar"
+            data-ph={canEdit ? "Sin descripción cargada — click para agregar" : "Sin descripción cargada"}
             ref={descRef}
-            onBlur={()=>onDescSave(family.id, descRef.current.innerText.trim())}
+            onBlur={async ()=>{
+              if(!canEdit) return;
+              const t = descRef.current.innerText.trim();
+              if(t !== (family.descripcion||"")){ const err = await onFieldSave(family.id, "descripcion", t, family.descripcion); if(err) descRef.current.innerText = family.descripcion || ""; }
+            }}
           >{family.descripcion || ""}</div>
 
           <details className="adicional">
-            <summary>Información adicional</summary>
+            <summary>Requisitos y controles (Q.12)</summary>
             <div className="adicional-grid">
-              <EditableField label="Medida de caja" value={family.medidaCaja} onSave={save("medidaCaja")} />
-              <EditableField label="Unid. x caja" value={family.unidXCaja} onSave={save("unidXCaja")} />
-              <EditableField label="Medida de bolsa" value={family.medidaBolsa} onSave={save("medidaBolsa")} />
-              <EditableField label="Unid. x bolsa" value={family.unidXBolsa} onSave={save("unidXBolsa")} />
-              <EditableField label="Tipo de dosificación" value={family.tipoDosificacion} onSave={save("tipoDosificacion")} />
-              <EditableField label="Código dosificación" value={family.codigoDosificacion} onSave={save("codigoDosificacion")} />
-              <EditableField label="Dosificación %" value={family.dosificacionPct} onSave={save("dosificacionPct")} />
-              <EditableField label="Gr x Kg" value={family.grXKg} onSave={save("grXKg")} />
-              <EditableField label="Gr x Bolsa" value={family.grXBolsa} onSave={save("grXBolsa")} />
+              {["clienteProveeMP","clienteProveeInsumos","planos","legislacion","muestraPatron","controlDimensional","controlFuncional","procedimientosEspeciales","observaciones"].map(campo)}
             </div>
+          </details>
+
+          <details className="adicional">
+            <summary>Embalaje y dosificación</summary>
+            <div className="adicional-grid">
+              {["medidaCaja","unidXCaja","medidaBolsa","unidXBolsa","tipoDosificacion","codigoDosificacion","dosificacionPct","grXKg","grXBolsa","inserto"].map(campo)}
+            </div>
+          </details>
+
+          <details className="adicional">
+            <summary>Control de cambios{cambios && cambios.length ? " (" + cambios.length + ")" : ""}</summary>
+            <div style={{padding:"8px 4px"}}><CambiosTabla cambios={cambios} /></div>
           </details>
         </div>
       </div>
@@ -1078,21 +1270,49 @@ function saveNuevos(list){
   try{ localStorage.setItem(NUEVOS_KEY, JSON.stringify(list)); }catch(e){}
 }
 
+function ConnectDialog({p07, onClose}){
+  const [clave, setClave] = useState("");
+  const [nom, setNom] = useState(p07.nombre || "");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="overlay" onClick={(e)=>{ if(e.target.classList.contains("overlay")) onClose(); }}>
+      <div className="quick-form">
+        <h3>Conectar con el P.07</h3>
+        <p>Usá la misma clave y nombre del P.07. Con la clave de planta ves ubicaciones y subís fotos; con la de administrador también editás la ficha y vinculás moldes.</p>
+        <form onSubmit={async ev=>{ev.preventDefault(); setBusy(true); const e = await p07.connect(clave, nom); setErr(e||""); setBusy(false); if(!e) onClose();}}>
+          <label>Clave</label>
+          <input type="password" autoFocus value={clave} onChange={e=>setClave(e.target.value)} autoComplete="off" />
+          <label>Tu nombre</label>
+          <input value={nom} onChange={e=>setNom(e.target.value)} placeholder="Queda registrado en cada cambio" />
+          {err && <div className="molde-err" style={{marginTop:8}}>{err}</div>}
+          <div className="quick-form-actions">
+            <button type="button" className="btn-secondary" onClick={onClose}>Cancelar</button>
+            <button type="submit" className="btn-primary" disabled={busy || !clave || !nom.trim()}>Conectar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function App(){
-  const [overrides, setOverrides] = useState(loadOverrides());
-  const [nuevos, setNuevos] = useState(loadNuevos());
   const [query, setQuery] = useState("");
   const [clientFilter, setClientFilter] = useState("");
   const [openId, setOpenId] = useState(null);
   const [toast, setToast] = useState(null);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [connectOpen, setConnectOpen] = useState(false);
+  const [localCount, setLocalCount] = useState(0);
   const p07 = useP07();
 
   const families = useMemo(()=>{
-    const base = window.FICHA_DATA.map(f => mergeFamily(f, overrides, p07.fotoMap));
-    const extra = nuevos.map(f => mergeFamily(f, overrides, p07.fotoMap));
+    const base = window.FICHA_DATA.map(f => mergeFamily(f, p07.fichaMap, p07.fotoMap));
+    const extra = (p07.ficha||[]).filter(f=>f.datos && f.datos._nueva)
+      .sort((a,b)=>String(b.actualizado_en).localeCompare(String(a.actualizado_en)))
+      .map(f => mergeFamily(familiaNueva(f.familia_id, f.datos), p07.fichaMap, p07.fotoMap));
     return [...extra, ...base];
-  },[overrides, nuevos, p07.fotoMap]);
+  },[p07.fichaMap, p07.ficha, p07.fotoMap]);
 
   const clients = useMemo(()=>{
     const s = new Set(families.map(f=>f.cliente).filter(Boolean));
@@ -1111,75 +1331,79 @@ function App(){
   },[families, query, clientFilter]);
 
   const openFamily = families.find(f=>f.id===openId);
+  const famById = useMemo(()=>{ const m = new Map(); families.forEach(f=>m.set(f.id, f)); return m; },[families]);
+  // otras fichas que se fabrican con el/los molde(s) vinculados a esta
+  const compartidosDe = (fid)=>{
+    const mias = new Set((p07.byFamilia[fid]||[]).map(l=>l.m.id));
+    if(!mias.size) return [];
+    const out = new Set();
+    for(const v of p07.vinculos){ if(v.familia_id !== fid && mias.has(v.molde_id)){ const f = famById.get(v.familia_id); if(f) out.add(f.nombre); } }
+    return Array.from(out);
+  };
 
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(()=>setToast(null), 3200);
   };
 
-  const updateOverride = (id, patch) => {
-    setOverrides(prev=>{
-      const next = {...prev, [id]: {...(prev[id]||{}), ...patch}};
-      saveOverrides(next);
-      return next;
-    });
+  // datos locales que quedaron guardados en este navegador antes de compartir la ficha
+  const contarLocales = ()=>{
+    const ov = loadOverrides(), nv = loadNuevos();
+    const ids = Object.keys(ov).filter(id=>Object.keys(ov[id]||{}).some(k=>CAMPOS_FICHA.includes(k) || k==="variantFotos" || k==="logo"));
+    return ids.length + nv.length;
+  };
+  useEffect(()=>{ setLocalCount(p07.canEdit ? contarLocales() : 0); },[p07.canEdit, p07.ultima]);
+
+  const subirLocales = async ()=>{
+    const ov = loadOverrides(), nv = loadNuevos();
+    let ok = 0, fallos = 0;
+    const idMap = {};
+    for(const n of nv){
+      const campos = {}; CAMPOS_FICHA.forEach(k=>{ if(n[k]) campos[k] = n[k]; });
+      const r = await p07.altaFicha(campos);
+      if(r.id){ idMap[n.id] = r.id; ok++; } else fallos++;
+    }
+    const idsLocal = new Set([...Object.keys(ov), ...Object.keys(idMap)]);
+    for(const id of idsLocal){
+      const o = ov[id] || {}; const destino = idMap[id] || id;
+      if(id.startsWith("N") && !idMap[id]) continue;
+      const campos = {}; CAMPOS_FICHA.forEach(k=>{ if(o[k] !== undefined && o[k] !== "") campos[k] = o[k]; });
+      if(Object.keys(campos).length){ const e = await p07.guardarCampos(destino, campos, {}); e ? fallos++ : ok++; }
+      for(const [cod, uri] of Object.entries(o.variantFotos||{})){ const e = await p07.subirFoto(destino, cod, "producto", uri); e ? fallos++ : ok++; }
+      if(o.logo && String(o.logo).startsWith("data:")){ const e = await p07.subirFoto(destino, "", "logo", o.logo); e ? fallos++ : ok++; }
+    }
+    if(!fallos){ try{ localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(NUEVOS_KEY); }catch(e){} }
+    setLocalCount(fallos ? contarLocales() : 0);
+    showToast(fallos ? `Se subieron ${ok} cambios; ${fallos} fallaron (quedan en este navegador).` : `Listo: se subieron ${ok} cambios locales.`);
   };
 
-  const onFieldSave = (id, field, val) => {
-    updateOverride(id, {[field]: val});
-    showToast("Guardado");
-  };
-  const onDescSave = (id, val) => {
-    updateOverride(id, {descripcion: val});
-    showToast("Descripción guardada");
-  };
-  const guardarFotoLocal = (id, codigo, dataUri) => {
-    setOverrides(prev=>{
-      const current = prev[id] || {};
-      const variantFotos = {...(current.variantFotos||{}), [codigo]: dataUri};
-      const next = {...prev, [id]: {...current, variantFotos}};
-      saveOverrides(next);
-      return next;
-    });
+  const onFieldSave = async (id, field, val, anterior) => {
+    const err = await p07.guardarCampos(id, {[field]: val}, {[field]: anterior || ""});
+    showToast(err ? "No se pudo guardar: " + err : "Guardado");
+    return err;
   };
   const onVariantPhoto = async (id, codigo, dataUri) => {
-    if(p07.estado === "ok"){
-      const err = await p07.subirFoto(id, codigo, "producto", dataUri);
-      showToast(err ? "No se pudo subir: " + err : "Foto subida — la ven todos");
-    }else{
-      guardarFotoLocal(id, codigo, dataUri);
-      showToast("Foto guardada solo en este navegador (conectate al P.07 para compartirla)");
-    }
+    if(p07.estado !== "ok"){ setConnectOpen(true); showToast("Conectate al P.07 para subir fotos"); return; }
+    const err = await p07.subirFoto(id, codigo, "producto", dataUri);
+    showToast(err ? "No se pudo subir: " + err : "Foto subida — la ven todos");
   };
   const onLogoUpload = async (id, dataUri) => {
-    if(p07.estado === "ok"){
-      if(p07.rol !== "admin"){ showToast("El logo solo lo cambia el administrador"); return; }
-      const err = await p07.subirFoto(id, "", "logo", dataUri);
-      showToast(err ? "No se pudo subir: " + err : "Logo actualizado — lo ven todos");
-    }else{
-      updateOverride(id, {logo: dataUri});
-      showToast("Logo guardado solo en este navegador");
-    }
+    if(p07.estado !== "ok"){ setConnectOpen(true); return; }
+    if(p07.rol !== "admin"){ showToast("El logo solo lo cambia el administrador"); return; }
+    const err = await p07.subirFoto(id, "", "logo", dataUri);
+    showToast(err ? "No se pudo subir: " + err : "Logo actualizado — lo ven todos");
   };
 
-  const handleQuickCreate = ({nombre, cliente, material}) => {
-    const id = "N" + Date.now();
-    const nueva = {
-      id, nombre, cliente, logo: null, material,
-      molde:"", cavidades:"", pesoUnitario:"", tipo:"", ciclo:"",
-      medidaCaja:"", unidXCaja:"", medidaBolsa:"", unidXBolsa:"",
-      tipoDosificacion:"", codigoDosificacion:"", dosificacionPct:"", grXKg:"", grXBolsa:"",
-      inserto:"", observaciones:"", descripcion:"", posicion:"",
-      variantes:[{codigo:"-", codigoCliente:"-", color:"", foto:null}],
-    };
-    setNuevos(prev=>{
-      const next = [nueva, ...prev];
-      saveNuevos(next);
-      return next;
-    });
+  const handleQuickCreate = async ({nombre, cliente, material}) => {
+    const r = await p07.altaFicha({nombre, cliente, material});
+    if(r.error){ showToast("No se pudo crear: " + r.error); return; }
     setQuickAddOpen(false);
-    setOpenId(id);
-    showToast("Ficha creada — completala cuando quieras");
+    setOpenId(r.id);
+    showToast("Ficha creada — la completa el administrador");
+  };
+
+  const onPrint = (family, variant, cambios)=>{
+    imprimirQ12({family, variant, links: p07.byFamilia[family.id]||[], compartidos: compartidosDe(family.id), cambios, usuario: p07.nombre});
   };
 
   return (
@@ -1203,7 +1427,11 @@ function App(){
           </select>
         </div>
         <div className="count-pill">{filtered.length} de {families.length}</div>
-        <button className="quick-add-btn" onClick={()=>setQuickAddOpen(true)}>+ Alta rápida</button>
+        <button className="quick-add-btn" onClick={()=> p07.estado === "ok" ? setQuickAddOpen(true) : setConnectOpen(true)}>+ Alta rápida</button>
+        {p07.configured && (p07.estado === "ok"
+          ? <button className="conn-chip on" title="Desconectar" onClick={()=>p07.disconnect()}>● {p07.rol === "admin" ? "Administrador" : "Planta"} · salir</button>
+          : <button className="conn-chip" onClick={()=>setConnectOpen(true)}>Conectar con el P.07</button>)}
+        {localCount > 0 && <button className="conn-chip on" onClick={subirLocales} title="Hay ediciones guardadas solo en este navegador">Subir {localCount} cambio(s) locales</button>}
         <div className="header-identity">
           <div className="name">Mgter. Diego Ortiz</div>
           <div className="role">Consultor ISO · +54 9 11 4170-6692</div>
@@ -1247,12 +1475,15 @@ function App(){
         <FichaModal
           family={openFamily}
           p07={p07}
+          famNombres={compartidosDe(openFamily.id)}
           onClose={()=>setOpenId(null)}
           onFieldSave={onFieldSave}
-          onDescSave={onDescSave}
           onVariantPhoto={onVariantPhoto}
           onLogoUpload={onLogoUpload}
+          onPrint={onPrint}
         />}
+
+      {connectOpen && <ConnectDialog p07={p07} onClose={()=>setConnectOpen(false)} />}
 
       {quickAddOpen &&
         <QuickAddForm onCreate={handleQuickCreate} onCancel={()=>setQuickAddOpen(false)} />}

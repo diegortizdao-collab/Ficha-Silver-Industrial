@@ -37,16 +37,21 @@ solamente en el P.07 y la ficha lo refleja. Las tarjetas muestran la ubicación
 - El campo viejo "Molde (dato de la planilla anterior)" se conserva como referencia.
 - Requiere haber corrido `vinculos.sql` en Neon (repo del API, carpeta db).
 
-## Fotos compartidas
-Con la conexión al P.07 activa, "Cambiar foto" (clave de planta, p. ej. Mariano desde la
-máquina) sube la foto de esa variante a Neon y la ven todos los dispositivos. El logo del
-cliente lo cambia solo el administrador. Sin conexión, la foto queda solo en ese navegador.
-Requiere haber corrido `fotos.sql` en Neon (repo del API, carpeta db).
+## Fotos, edición y control de cambios (compartidos)
+Todo se guarda en Neon a través del Worker del P.07 y lo ven todos los dispositivos.
+- **Clave de planta:** ve ubicaciones, sube fotos de producto y da de alta fichas nuevas.
+- **Clave de administrador:** además edita todos los campos, el logo del cliente y los vínculos con moldes.
+- **Sin conexión:** solo lectura del maestro.
+- Cada edición queda en el **control de cambios** de la ficha (campo, antes, después, quién, cuándo).
+- Si el navegador tenía ediciones guardadas de la versión anterior, el administrador ve el botón "Subir N cambio(s) locales".
+Requiere correr en Neon: `vinculos.sql`, `fotos.sql` y `ficha_datos.sql` (repo del API, carpeta db).
+
+## Imprimir la ficha (Q.12)
+Botón "Imprimir ficha (Q.12)" en cada ficha: arma una hoja A4 con encabezado Silver (REV 03, COD Q.12), datos del producto, foto y logo, molde y ubicación vigente del P.07 (más otros productos que comparten el molde), requisitos del cliente, controles, descripción y control de cambios.
 
 ## Edición
-Cualquier campo de la ficha técnica es editable con un click (igual que el
-maestro del Planificador). Los cambios sobrescriben el dato original del Excel
-sin perderlo (el archivo base no se toca, solo se guarda el override).
+Los campos se editan con un click (solo administrador). El maestro original (`data.js`) no se
+toca: en Neon se guarda únicamente el valor editado, y el control de cambios guarda el anterior.
 
 ## Alta rápida
 Botón "+ Alta rápida" en el header: pensado para que Fernando pueda crear una
