@@ -19,11 +19,8 @@ Planificador Silver y NC Silver.
   Mariano las cargue
 
 ## Qué falta (a propósito, para ir viendo con uso real)
-- Carga de foto por variante (Mariano, en máquina) — el botón está pensado pero
-  el flujo de subida de imagen desde el navegador todavía no está conectado a
-  ningún backend; hoy los cambios de campo quedan en localStorage del navegador,
-  no compartidos entre dispositivos (mismo punto de partida que tuvo el
-  Planificador antes de migrar a Firebase)
+- Los cambios de campo de la ficha (material, ciclo, descripción, altas rápidas)
+  todavía quedan en el localStorage del navegador, no compartidos entre dispositivos.
 - Sin validación de capacidad de pallet (a propósito, según lo definido)
 - Molde real del grupo PUÑOS (308 BIS) ya resuelto: mismo número para molde y
   estantería, se carga tal cual
@@ -39,6 +36,12 @@ solamente en el P.07 y la ficha lo refleja. Las tarjetas muestran la ubicación
 - `config.js` trae API_URL (Worker del P.07) y P07_URL.
 - El campo viejo "Molde (dato de la planilla anterior)" se conserva como referencia.
 - Requiere haber corrido `vinculos.sql` en Neon (repo del API, carpeta db).
+
+## Fotos compartidas
+Con la conexión al P.07 activa, "Cambiar foto" (clave de planta, p. ej. Mariano desde la
+máquina) sube la foto de esa variante a Neon y la ven todos los dispositivos. El logo del
+cliente lo cambia solo el administrador. Sin conexión, la foto queda solo en ese navegador.
+Requiere haber corrido `fotos.sql` en Neon (repo del API, carpeta db).
 
 ## Edición
 Cualquier campo de la ficha técnica es editable con un click (igual que el

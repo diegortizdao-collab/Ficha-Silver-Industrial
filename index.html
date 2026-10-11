@@ -611,7 +611,7 @@ const NAME_KEY = "fichaTecnicaSilver_usuario";
 
 function resolveAsset(fn){
   if(!fn) return "";
-  if(fn.indexOf("data:") === 0) return fn;
+  if(fn.indexOf("data:") === 0 || fn.indexOf("http") === 0) return fn;
   return ASSET_BASE + fn;
 }
 
@@ -656,12 +656,19 @@ function resizeImageFile(file, maxDim, quality){
   });
 }
 
-function mergeFamily(base, overrides){
+function mergeFamily(base, overrides, fotoMap){
   const ov = overrides[base.id] || {};
+  const fm = fotoMap || {};
   const variantFotos = ov.variantFotos || {};
-  const variantes = base.variantes.map(v => variantFotos[v.codigo] ? {...v, foto: variantFotos[v.codigo]} : v);
+  // la foto compartida (servidor) tiene prioridad sobre la guardada solo en este navegador
+  const variantes = base.variantes.map(v => {
+    const srv = fm[base.id + "|" + v.codigo + "|producto"];
+    const loc = variantFotos[v.codigo];
+    return (srv || loc) ? {...v, foto: srv || loc} : v;
+  });
   const {variantFotos: _drop, ...rest} = ov;
-  return {...base, ...rest, variantes};
+  const logoSrv = fm[base.id + "||logo"];
+  return {...base, ...rest, ...(logoSrv ? {logo: logoSrv} : {}), variantes};
 }
 
 function fmtDate(iso){
@@ -722,14 +729,14 @@ function tokSet(s){ return new Set(normTxt(s).replace(/[^a-z0-9 ]/g," ").split(/
 function useP07(){
   const [clave, setClave] = useState(P07_LS.get("p07_clave"));
   const [nombre, setNombre] = useState(P07_LS.get("p07_nombre"));
-  const [st, setSt] = useState({estado: (P07_API && clave) ? "cargando" : "sin_clave", rol:null, moldes:[], vinculos:[], ultima:null, error:""});
+  const [st, setSt] = useState({estado: (P07_API && clave) ? "cargando" : "sin_clave", rol:null, moldes:[], vinculos:[], fotos:[], ultima:null, error:""});
 
   const reload = useCallback(async (k)=>{
     const c = k || clave;
     if(!P07_API || !c) return;
     try{
-      const [d, v] = await Promise.all([p07Call(c,"/api/p07"), p07Call(c,"/api/vinculos")]);
-      setSt({estado:"ok", rol:d.rol, moldes:d.moldes, vinculos:v.vinculos, ultima:new Date(), error:""});
+      const [d, v, f] = await Promise.all([p07Call(c,"/api/p07"), p07Call(c,"/api/vinculos"), p07Call(c,"/api/fotos").catch(()=>({fotos:[]}))]);
+      setSt({estado:"ok", rol:d.rol, moldes:d.moldes, vinculos:v.vinculos, fotos:f.fotos, ultima:new Date(), error:""});
     }catch(e){
       if(e.status===401 || e.status===403){ P07_LS.del("p07_clave"); setClave(""); setSt(s=>({...s, estado:"sin_clave", error:"Clave incorrecta."})); }
       else setSt(s=>({...s, estado: s.moldes.length ? "ok" : "error", error:e.message, offline:true}));
@@ -754,7 +761,7 @@ function useP07(){
       return "";
     }catch(e){ return e.status===401||e.status===403 ? "Clave incorrecta." : e.message; }
   };
-  const disconnect = ()=>{ P07_LS.del("p07_clave"); setClave(""); setSt({estado:"sin_clave", rol:null, moldes:[], vinculos:[], ultima:null, error:""}); };
+  const disconnect = ()=>{ P07_LS.del("p07_clave"); setClave(""); setSt({estado:"sin_clave", rol:null, moldes:[], vinculos:[], fotos:[], ultima:null, error:""}); };
 
   const needName = ()=>{
     let n = nombre;
@@ -767,6 +774,7 @@ function useP07(){
   };
   const link = (fid, moldeId)=>act(n=>p07Call(clave, "/api/vinculos/"+encodeURIComponent(fid), {method:"PUT", body:{nombre:n, molde_id:moldeId}}));
   const confirm = (fid)=>act(n=>p07Call(clave, "/api/vinculos/"+encodeURIComponent(fid)+"/confirmar", {method:"POST", body:{nombre:n}}));
+  const subirFoto = (fid, variante, tipo, dataUri)=>act(n=>p07Call(clave, "/api/fotos", {method:"POST", body:{nombre:n, familia_id:fid, variante, tipo, imagen:dataUri}}));
   const unlink = (fid, moldeId)=>act(()=>p07Call(clave, "/api/vinculos/"+encodeURIComponent(fid)+"/"+moldeId, {method:"DELETE"}));
 
   const byFamilia = useMemo(()=>{
@@ -779,7 +787,13 @@ function useP07(){
     return out;
   },[st.moldes, st.vinculos]);
 
-  return {...st, nombre, byFamilia, reload, connect, disconnect, link, confirm, unlink, configured: !!P07_API};
+  const fotoMap = useMemo(()=>{
+    const m = {};
+    for(const f of (st.fotos||[])) m[f.familia_id + "|" + f.variante + "|" + f.tipo] = P07_API + "/api/fotos/" + f.id + "/img";
+    return m;
+  },[st.fotos]);
+
+  return {...st, nombre, byFamilia, fotoMap, subirFoto, reload, connect, disconnect, link, confirm, unlink, configured: !!P07_API};
 }
 
 function fmtFecha(iso){
@@ -1075,10 +1089,10 @@ function App(){
   const p07 = useP07();
 
   const families = useMemo(()=>{
-    const base = window.FICHA_DATA.map(f => mergeFamily(f, overrides));
-    const extra = nuevos.map(f => mergeFamily(f, overrides));
+    const base = window.FICHA_DATA.map(f => mergeFamily(f, overrides, p07.fotoMap));
+    const extra = nuevos.map(f => mergeFamily(f, overrides, p07.fotoMap));
     return [...extra, ...base];
-  },[overrides, nuevos]);
+  },[overrides, nuevos, p07.fotoMap]);
 
   const clients = useMemo(()=>{
     const s = new Set(families.map(f=>f.cliente).filter(Boolean));
@@ -1100,7 +1114,7 @@ function App(){
 
   const showToast = (msg) => {
     setToast(msg);
-    setTimeout(()=>setToast(null), 1800);
+    setTimeout(()=>setToast(null), 3200);
   };
 
   const updateOverride = (id, patch) => {
@@ -1119,7 +1133,7 @@ function App(){
     updateOverride(id, {descripcion: val});
     showToast("Descripción guardada");
   };
-  const onVariantPhoto = (id, codigo, dataUri) => {
+  const guardarFotoLocal = (id, codigo, dataUri) => {
     setOverrides(prev=>{
       const current = prev[id] || {};
       const variantFotos = {...(current.variantFotos||{}), [codigo]: dataUri};
@@ -1127,11 +1141,25 @@ function App(){
       saveOverrides(next);
       return next;
     });
-    showToast("Foto guardada");
   };
-  const onLogoUpload = (id, dataUri) => {
-    updateOverride(id, {logo: dataUri});
-    showToast("Logo actualizado");
+  const onVariantPhoto = async (id, codigo, dataUri) => {
+    if(p07.estado === "ok"){
+      const err = await p07.subirFoto(id, codigo, "producto", dataUri);
+      showToast(err ? "No se pudo subir: " + err : "Foto subida — la ven todos");
+    }else{
+      guardarFotoLocal(id, codigo, dataUri);
+      showToast("Foto guardada solo en este navegador (conectate al P.07 para compartirla)");
+    }
+  };
+  const onLogoUpload = async (id, dataUri) => {
+    if(p07.estado === "ok"){
+      if(p07.rol !== "admin"){ showToast("El logo solo lo cambia el administrador"); return; }
+      const err = await p07.subirFoto(id, "", "logo", dataUri);
+      showToast(err ? "No se pudo subir: " + err : "Logo actualizado — lo ven todos");
+    }else{
+      updateOverride(id, {logo: dataUri});
+      showToast("Logo guardado solo en este navegador");
+    }
   };
 
   const handleQuickCreate = ({nombre, cliente, material}) => {
