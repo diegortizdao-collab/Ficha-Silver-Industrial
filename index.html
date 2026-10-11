@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ficha Técnica · Silver Industrial</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script src="config.js"></script>
+<script src="data.js"></script>
+<style>
+  :root{
+    --graphite:#33356E;
+    --graphite-2:#454889;
+    --paper:#E8F0F7;
+    --paper-2:#FFFFFF;
+    --line:#E2DED5;
+    --ink:#1B1F27;
+    --ink-soft:#5B6270;
+    --sage:#6FA37F;
+    --sage-deep:#3D6B4E;
+    --wine:#6E2A3A;
+    --wine-text:#E7BFC7;
+    --ok:#2F7A4F;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  #root{min-height:100vh;}
+
+  .topbar{
+    background:var(--graphite);
+    color:#fff;
+    padding:18px 28px;
+    display:flex;
+    align-items:center;
+    gap:24px;
+    position:sticky;
+    top:0;
+    z-index:20;
+    box-shadow:0 2px 10px rgba(0,0,0,.15);
+  }
+  .brand{
+    font-size:20px;
+    font-weight:700;
+    letter-spacing:-0.02em;
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+    white-space:nowrap;
+  }
+  .brand small{
+    font-weight:400;
+    font-size:12px;
+    color:#B7BCC6;
+  }
+  .header-logos{
+    display:flex;
+    align-items:center;
+    gap:18px;
+  }
+  .header-logo-badge{
+    background:#fff;
+    border-radius:8px;
+    padding:6px 12px;
+    display:flex;
+    align-items:center;
+  }
+  .header-logo-badge img{height:44px;display:block;}
+  .header-iso-pending{
+    height:44px;
+    padding:0 14px;
+    border:1px dashed #4A5261;
+    border-radius:8px;
+    display:flex;
+    align-items:center;
+    color:#8A8F99;
+    font-size:11px;
+    white-space:nowrap;
+  }
+  .header-identity{
+    text-align:right;
+    line-height:1.3;
+    white-space:nowrap;
+  }
+  .header-identity .name{
+    font-size:14px;
+    font-weight:700;
+    color:#fff;
+  }
+  .header-identity .role{
+    font-size:11.5px;
+    color:#B7BCC6;
+  }
+  .search-wrap{
+    flex:1;
+    display:flex;
+    gap:10px;
+    max-width:760px;
+  }
+  .search-input{
+    flex:1;
+    background:var(--graphite-2);
+    border:1px solid #333A47;
+    color:#fff;
+    padding:10px 14px;
+    border-radius:6px;
+    font-size:14px;
+    outline:none;
+  }
+  .search-input::placeholder{color:#8A8F99;}
+  .search-input:focus{border-color:var(--sage);}
+  select.client-filter{
+    background:var(--graphite-2);
+    border:1px solid #333A47;
+    color:#fff;
+    padding:10px 12px;
+    border-radius:6px;
+    font-size:14px;
+    outline:none;
+    max-width:220px;
+  }
+  .count-pill{
+    font-size:12px;
+    color:#B7BCC6;
+    white-space:nowrap;
+  }
+
+  .container{
+    max-width:1280px;
+    margin:0 auto;
+    padding:24px 28px 80px;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+    gap:16px;
+  }
+  .card{
+    background:var(--paper-2);
+    border:1px solid var(--line);
+    border-radius:8px;
+    overflow:hidden;
+    cursor:pointer;
+    transition:box-shadow .15s ease, transform .15s ease;
+    display:flex;
+    flex-direction:column;
+  }
+  .card:hover{
+    box-shadow:0 6px 20px rgba(27,31,39,.12);
+    transform:translateY(-2px);
+  }
+  .card-photo{
+    height:150px;
+    background:var(--wine);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    overflow:hidden;
+  }
+  .card-photo img{width:100%;height:100%;object-fit:cover;}
+  .card-photo .noimg{
+    color:var(--wine-text);
+    font-size:12px;
+    text-align:center;
+    padding:0 12px;
+  }
+  .logo-badge{
+    position:absolute;
+    bottom:8px;
+    right:8px;
+    width:44px;
+    height:44px;
+    border-radius:6px;
+    background:#fff;
+    padding:5px;
+    box-shadow:0 1px 4px rgba(0,0,0,.2);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .logo-badge img{width:100%;height:100%;object-fit:contain;}
+  .card-body{padding:12px 14px 14px;}
+  .card-title{
+    font-size:13.5px;
+    font-weight:650;
+    line-height:1.3;
+    margin:0 0 4px;
+    color:var(--ink);
+  }
+  .card-client{
+    font-size:12px;
+    color:var(--ink-soft);
+    margin:0;
+  }
+  .card-meta{
+    font-size:11px;
+    color:#9AA0AA;
+    margin-top:6px;
+  }
+  .variant-count{
+    display:inline-block;
+    background:#E3F0E6;
+    color:var(--sage-deep);
+    font-size:10.5px;
+    font-weight:700;
+    padding:2px 7px;
+    border-radius:20px;
+    margin-top:6px;
+  }
+
+  .empty-state{
+    text-align:center;
+    padding:80px 20px;
+    color:var(--ink-soft);
+  }
+
+  /* ---- Ficha detail (modal) ---- */
+  .overlay{
+    position:fixed;inset:0;
+    background:rgba(20,22,26,.55);
+    z-index:50;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:32px 16px;
+    overflow-y:auto;
+  }
+  .ficha{
+    background:var(--paper-2);
+    max-width:920px;
+    width:100%;
+    border-radius:10px;
+    overflow:hidden;
+    box-shadow:0 20px 60px rgba(0,0,0,.3);
+  }
+  .ficha-close{
+    position:absolute;
+    top:14px;right:14px;
+    background:rgba(0,0,0,.35);
+    color:#fff;
+    border:none;
+    width:32px;height:32px;
+    border-radius:50%;
+    font-size:16px;
+    cursor:pointer;
+    z-index:5;
+  }
+  .ficha-hero{
+    position:relative;
+    background:var(--graphite);
+    display:grid;
+    grid-template-columns:1fr 280px;
+  }
+  .ficha-hero-photo{
+    height:340px;
+    background:var(--wine);
+    display:flex;align-items:center;justify-content:center;
+    overflow:hidden;
+    position:relative;
+  }
+  .ficha-hero-photo img{width:100%;height:100%;object-fit:cover;}
+  .ficha-hero-photo .noimg-lg{
+    color:var(--wine-text);font-size:14px;text-align:center;
+  }
+  .photo-upload-btn{
+    position:absolute;
+    bottom:14px;right:14px;
+    background:rgba(27,31,39,.72);
+    color:#fff;
+    border:none;
+    padding:9px 14px;
+    border-radius:20px;
+    font-size:12.5px;
+    font-weight:650;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .photo-upload-btn:hover{background:rgba(27,31,39,.88);}
+  .logo-edit-btn{
+    position:absolute;
+    bottom:-6px;right:-6px;
+    width:24px;height:24px;
+    border-radius:50%;
+    background:var(--sage-deep);
+    color:#fff;
+    border:2px solid #fff;
+    font-size:12px;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    padding:0;
+  }
+  .ficha-hero-side{
+    background:var(--graphite-2);
+    color:#fff;
+    padding:24px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:14px;
+  }
+  .ficha-client-logo{
+    width:120px;height:120px;
+    background:#fff;
+    border-radius:12px;
+    padding:12px;
+    display:flex;align-items:center;justify-content:center;
+    position:relative;
+  }
+  .ficha-client-logo img{width:100%;height:100%;object-fit:contain;}
+  .ficha-client-name{font-size:13px;color:#B7BCC6;letter-spacing:.02em;}
+  .ficha-name{
+    font-size:22px;
+    font-weight:750;
+    line-height:1.2;
+    letter-spacing:-0.01em;
+  }
+
+  .ficha-body{padding:26px 30px 34px;}
+
+  .id-row{
+    display:flex;
+    gap:24px;
+    padding:14px 0 20px;
+    border-bottom:1px solid var(--line);
+    flex-wrap:wrap;
+  }
+  .id-field{display:flex;flex-direction:column;gap:2px;}
+  .id-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#9AA0AA;font-weight:650;}
+  .id-value{font-size:14.5px;font-weight:600;color:var(--ink);}
+
+  .section-title{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.07em;
+    color:var(--sage-deep);
+    font-weight:700;
+    margin:26px 0 12px;
+  }
+
+  .core-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:14px 22px;
+  }
+  .field{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    padding:10px 0;
+    border-bottom:1px dashed var(--line);
+  }
+  .field-label{font-size:11px;color:var(--ink-soft);font-weight:600;}
+  .field-value{
+    font-size:14.5px;
+    color:var(--ink);
+    font-weight:550;
+    min-height:20px;
+    outline:none;
+    border-radius:4px;
+    padding:2px 4px;
+    margin:-2px -4px;
+  }
+  .field-value[contenteditable="true"]:hover{
+    background:#EAF4EC;
+    cursor:text;
+  }
+  .field-value[contenteditable="true"]:focus{
+    background:#EAF4EC;
+    box-shadow:0 0 0 2px var(--sage);
+  }
+
+  .pos-field{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .pos-badge{
+    background:var(--graphite);
+    color:#fff;
+    font-weight:700;
+    font-size:13px;
+    padding:5px 12px;
+    border-radius:20px;
+  }
+  .pos-empty{color:#B4AF9F;font-size:13px;font-style:italic;}
+  .pos-edit-btn{
+    border:1px solid var(--line);
+    background:#fff;
+    font-size:12px;
+    padding:5px 10px;
+    border-radius:6px;
+    cursor:pointer;
+    color:var(--ink-soft);
+  }
+  .pos-edit-btn:hover{border-color:var(--sage);color:var(--sage-deep);}
+  .pos-stamp{font-size:11px;color:#9AA0AA;width:100%;}
+
+
+  /* ---- Molde y ubicación (P.07, en vivo) ---- */
+  .molde-box{grid-column:1/-1;border:1px solid var(--line);border-radius:10px;background:#fff;padding:12px 14px;margin-top:6px;}
+  .molde-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+  .molde-head .t{font-weight:700;font-size:13px;color:var(--graphite);text-transform:uppercase;letter-spacing:.04em;}
+  .molde-head .live{font-size:11px;color:var(--ink-soft);margin-left:auto;}
+  .molde-head .live i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);margin-right:5px;}
+  .molde-head .live.off i{background:#B4AF9F;}
+  .molde-item{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;padding:10px 0;border-top:1px dashed var(--line);}
+  .molde-item:first-of-type{border-top:0;}
+  .molde-pos{background:var(--graphite);color:#fff;font-weight:800;font-size:20px;padding:8px 16px;border-radius:12px;min-width:64px;text-align:center;line-height:1.1;}
+  .molde-pos small{display:block;font-weight:600;font-size:10px;opacity:.8;letter-spacing:.05em;margin-top:2px;}
+  .molde-pos.sug{background:#fff;color:var(--graphite);border:2px dashed var(--graphite-2);}
+  .molde-info{flex:1;min-width:200px;font-size:13px;line-height:1.45;}
+  .molde-info .esp{font-weight:600;white-space:pre-line;}
+  .molde-info .meta{color:var(--ink-soft);font-size:12px;}
+  .molde-tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:#FFF4D6;color:#8A6200;margin-right:6px;}
+  .molde-tag.ok{background:#E3F2E8;color:var(--sage-deep);}
+  .molde-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+  .molde-empty{color:#8E93A0;font-size:13px;font-style:italic;padding:4px 0 8px;}
+  .molde-connect{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .molde-connect input,.molde-pick input{padding:6px 10px;border:1px solid var(--line);border-radius:6px;font-size:14px;min-width:150px;}
+  .molde-err{color:#A3322A;font-size:12px;width:100%;}
+  .molde-pick{margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:10px;background:#FAFBFD;}
+  .molde-pick .lst{max-height:260px;overflow:auto;margin-top:8px;display:flex;flex-direction:column;gap:4px;}
+  .molde-pick .opt{display:flex;gap:10px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;font-size:13px;text-align:left;}
+  .molde-pick .opt:hover{border-color:var(--sage);background:#F3FAF5;}
+  .molde-pick .opt b{background:var(--graphite);color:#fff;border-radius:12px;padding:2px 9px;font-size:12px;min-width:44px;text-align:center;}
+  .molde-pick .opt span.c{color:var(--ink-soft);font-size:12px;}
+  .pos-chip{display:inline-block;margin-top:6px;font-size:11px;font-weight:700;padding:2px 9px;border-radius:12px;background:var(--graphite);color:#fff;}
+  .pos-chip.sug{background:#fff;color:var(--graphite);border:1px dashed var(--graphite-2);}
+  .credit{margin:36px auto 0;text-align:center;font-size:12px;color:var(--ink-soft);}
+
+  .variants-scroll{
+    display:flex;
+    gap:12px;
+    overflow-x:auto;
+    padding:4px 2px 10px;
+  }
+  .variant-chip{
+    flex:0 0 auto;
+    width:88px;
+    text-align:center;
+    cursor:pointer;
+    border:2px solid transparent;
+    border-radius:8px;
+    padding:6px;
+  }
+  .variant-chip.active{border-color:var(--sage);background:#EAF4EC;}
+  .variant-thumb{
+    width:64px;height:64px;
+    border-radius:6px;
+    background:var(--wine);
+    margin:0 auto 6px;
+    overflow:hidden;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .variant-thumb img{width:100%;height:100%;object-fit:cover;}
+  .variant-thumb .dot{width:20px;height:20px;border-radius:50%;background:var(--wine-text);opacity:.6;}
+  .variant-code{font-size:10.5px;font-weight:700;color:var(--ink);}
+  .variant-color{font-size:9.5px;color:var(--ink-soft);}
+
+  .desc-box{
+    font-size:14px;
+    line-height:1.55;
+    color:var(--ink);
+    min-height:44px;
+    outline:none;
+    border-radius:6px;
+    padding:8px 10px;
+    margin:0 -10px;
+    background:#F4F8F5;
+    border:1px solid transparent;
+  }
+  .desc-box:hover{border-color:var(--line);cursor:text;}
+  .desc-box:focus{border-color:var(--sage);background:#EAF4EC;}
+  .desc-box:empty:before{content:attr(data-ph);color:#B4AF9F;}
+
+  details.adicional{
+    border:1px solid var(--line);
+    border-radius:8px;
+    margin-top:22px;
+    overflow:hidden;
+  }
+  details.adicional summary{
+    padding:12px 16px;
+    cursor:pointer;
+    font-size:12.5px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    color:var(--ink-soft);
+    background:#F4F8F5;
+    list-style:none;
+  }
+  details.adicional summary::-webkit-details-marker{display:none;}
+  details.adicional summary:before{content:"▸ ";color:var(--sage-deep);}
+  details.adicional[open] summary:before{content:"▾ ";}
+  .adicional-grid{
+    padding:16px;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:12px 20px;
+  }
+
+  .quick-add-btn{
+    background:var(--sage-deep);
+    color:#fff;
+    border:none;
+    padding:10px 16px;
+    border-radius:6px;
+    font-size:13px;
+    font-weight:650;
+    cursor:pointer;
+    white-space:nowrap;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .quick-add-btn:hover{background:#2F5A3B;}
+
+  .quick-form{
+    background:var(--paper-2);
+    max-width:420px;
+    width:100%;
+    border-radius:10px;
+    padding:26px;
+  }
+  .quick-form h3{margin:0 0 4px;font-size:18px;}
+  .quick-form p{margin:0 0 20px;font-size:13px;color:var(--ink-soft);}
+  .quick-form label{
+    display:block;
+    font-size:11.5px;
+    font-weight:650;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    margin:14px 0 5px;
+  }
+  .quick-form input{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-size:14.5px;
+    outline:none;
+    font-family:inherit;
+  }
+  .quick-form input:focus{border-color:var(--sage);box-shadow:0 0 0 2px #EAF4EC;}
+  .quick-form-actions{
+    display:flex;
+    gap:10px;
+    margin-top:24px;
+  }
+  .quick-form-actions button{
+    flex:1;
+    padding:11px;
+    border-radius:6px;
+    font-size:14px;
+    font-weight:650;
+    cursor:pointer;
+    border:none;
+  }
+  .quick-form-actions .btn-primary{background:var(--sage-deep);color:#fff;}
+  .quick-form-actions .btn-primary:disabled{background:#B9C9BD;cursor:not-allowed;}
+  .quick-form-actions .btn-secondary{background:#F0EEE9;color:var(--ink);}
+
+  .toast{
+    position:fixed;
+    bottom:20px;left:50%;
+    transform:translateX(-50%);
+    background:var(--graphite);
+    color:#fff;
+    padding:10px 18px;
+    border-radius:8px;
+    font-size:13px;
+    z-index:100;
+    box-shadow:0 6px 20px rgba(0,0,0,.3);
+  }
+
+  @media (max-width:720px){
+    .topbar{flex-wrap:wrap;padding:14px 16px;}
+    .search-wrap{order:4;max-width:none;width:100%;}
+    .header-identity{text-align:left;order:5;}
+    .header-logo-badge img{height:34px;}
+    .ficha-hero{grid-template-columns:1fr;}
+    .core-grid{grid-template-columns:1fr 1fr;}
+    .adicional-grid{grid-template-columns:1fr 1fr;}
+    .container{padding:16px;}
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const {useState,useMemo,useEffect,useRef,useCallback} = React;
+
+const ASSET_BASE = "assets/";
+const STORAGE_KEY = "fichaTecnicaSilver_overrides_v1";
+const NAME_KEY = "fichaTecnicaSilver_usuario";
+
+function resolveAsset(fn){
+  if(!fn) return "";
+  if(fn.indexOf("data:") === 0) return fn;
+  return ASSET_BASE + fn;
+}
+
+function obtenerNombreUsuario(){
+  let n;
+  try{ n = localStorage.getItem(NAME_KEY); }catch(e){ n = null; }
+  if(!n){
+    n = (window.prompt("¿Cómo te llamás? (para saber quién actualizó cada ficha o posición)") || "Sin nombre").trim() || "Sin nombre";
+    try{ localStorage.setItem(NAME_KEY, n); }catch(e){}
+  }
+  return n;
+}
+
+function loadOverrides(){
+  try{
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+  }catch(e){ return {}; }
+}
+function saveOverrides(ov){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(ov)); }catch(e){ /* sin persistencia en este modo */ }
+}
+
+function resizeImageFile(file, maxDim, quality){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        let {width, height} = img;
+        if(width > height && width > maxDim){ height = Math.round(height*maxDim/width); width = maxDim; }
+        else if(height > maxDim){ width = Math.round(width*maxDim/height); height = maxDim; }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality || 0.8));
+      };
+      img.onerror = reject;
+      img.src = ev.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function mergeFamily(base, overrides){
+  const ov = overrides[base.id] || {};
+  const variantFotos = ov.variantFotos || {};
+  const variantes = base.variantes.map(v => variantFotos[v.codigo] ? {...v, foto: variantFotos[v.codigo]} : v);
+  const {variantFotos: _drop, ...rest} = ov;
+  return {...base, ...rest, variantes};
+}
+
+function fmtDate(iso){
+  if(!iso) return "";
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2,"0");
+  return `${pad(d.getDate())}/${pad(d.getMonth()+1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function EditableField({label, value, onSave, placeholder}){
+  const ref = useRef(null);
+  const handleBlur = () => {
+    const text = ref.current.innerText.trim();
+    if(text !== (value||"")){
+      onSave(text);
+    }
+  };
+  return (
+    <div className="field">
+      <div className="field-label">{label}</div>
+      <div
+        className="field-value"
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={handleBlur}
+        ref={ref}
+      >{value || ""}</div>
+    </div>
+  );
+}
+
+const P07_CFG = window.P07_CONFIG || {};
+const P07_API = (P07_CFG.API_URL || "").replace(/\/$/, "");
+const P07_URL = P07_CFG.P07_URL || "https://diegortizdao-collab.github.io/P07-Moldes-Silver-Industrial/";
+const P07_LS = {
+  get:(k)=>{ try{ return localStorage.getItem(k) || ""; }catch(e){ return ""; } },
+  set:(k,v)=>{ try{ localStorage.setItem(k,v); }catch(e){} },
+  del:(k)=>{ try{ localStorage.removeItem(k); }catch(e){} },
+};
+
+async function p07Call(clave, path, opts){
+  opts = opts || {};
+  const headers = {"X-Clave": clave};
+  if(opts.body) headers["Content-Type"] = "application/json";
+  let r;
+  try{
+    r = await fetch(P07_API + path, {method: opts.method || "GET", headers, body: opts.body ? JSON.stringify(opts.body) : undefined});
+  }catch(e){ const er = new Error("Sin conexión con el P.07."); er.offline = true; throw er; }
+  let j = null; try{ j = await r.json(); }catch(e){}
+  if(!r.ok){ const er = new Error((j && j.error) || ("Error " + r.status)); er.status = r.status; throw er; }
+  return j;
+}
+
+function normTxt(s){ return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,""); }
+function tokSet(s){ return new Set(normTxt(s).replace(/[^a-z0-9 ]/g," ").split(/\s+/).filter(t=>t.length>1)); }
+
+// Conexión en vivo con el P.07: la ficha NO guarda posiciones, las lee del P.07 a través de los vínculos.
+function useP07(){
+  const [clave, setClave] = useState(P07_LS.get("p07_clave"));
+  const [nombre, setNombre] = useState(P07_LS.get("p07_nombre"));
+  const [st, setSt] = useState({estado: (P07_API && clave) ? "cargando" : "sin_clave", rol:null, moldes:[], vinculos:[], ultima:null, error:""});
+
+  const reload = useCallback(async (k)=>{
+    const c = k || clave;
+    if(!P07_API || !c) return;
+    try{
+      const [d, v] = await Promise.all([p07Call(c,"/api/p07"), p07Call(c,"/api/vinculos")]);
+      setSt({estado:"ok", rol:d.rol, moldes:d.moldes, vinculos:v.vinculos, ultima:new Date(), error:""});
+    }catch(e){
+      if(e.status===401 || e.status===403){ P07_LS.del("p07_clave"); setClave(""); setSt(s=>({...s, estado:"sin_clave", error:"Clave incorrecta."})); }
+      else setSt(s=>({...s, estado: s.moldes.length ? "ok" : "error", error:e.message, offline:true}));
+    }
+  },[clave]);
+
+  useEffect(()=>{
+    if(!clave) return;
+    reload();
+    const t = setInterval(()=>{ if(!document.hidden) reload(); }, 60000);
+    return ()=>clearInterval(t);
+  },[clave, reload]);
+
+  const connect = async (c, n)=>{
+    const nom = (n||"").trim();
+    if(!c) return "Ingresá la clave.";
+    try{
+      const r = await p07Call(c, "/api/login", {method:"POST", body:{}});
+      P07_LS.set("p07_clave", c); setClave(c);
+      if(nom){ P07_LS.set("p07_nombre", nom); setNombre(nom); }
+      setSt(s=>({...s, estado:"cargando", rol:r.rol, error:""}));
+      return "";
+    }catch(e){ return e.status===401||e.status===403 ? "Clave incorrecta." : e.message; }
+  };
+  const disconnect = ()=>{ P07_LS.del("p07_clave"); setClave(""); setSt({estado:"sin_clave", rol:null, moldes:[], vinculos:[], ultima:null, error:""}); };
+
+  const needName = ()=>{
+    let n = nombre;
+    if(!n){ n = (window.prompt("¿Cómo te llamás? (queda registrado en el vínculo)")||"").trim(); if(n){ P07_LS.set("p07_nombre", n); setNombre(n); } }
+    return n;
+  };
+  const act = async (fn)=>{
+    const n = needName(); if(!n) return "Falta tu nombre.";
+    try{ await fn(n); await reload(); return ""; }catch(e){ return e.message; }
+  };
+  const link = (fid, moldeId)=>act(n=>p07Call(clave, "/api/vinculos/"+encodeURIComponent(fid), {method:"PUT", body:{nombre:n, molde_id:moldeId}}));
+  const confirm = (fid)=>act(n=>p07Call(clave, "/api/vinculos/"+encodeURIComponent(fid)+"/confirmar", {method:"POST", body:{nombre:n}}));
+  const unlink = (fid, moldeId)=>act(()=>p07Call(clave, "/api/vinculos/"+encodeURIComponent(fid)+"/"+moldeId, {method:"DELETE"}));
+
+  const byFamilia = useMemo(()=>{
+    const mm = new Map(st.moldes.map(m=>[m.id, m]));
+    const out = {};
+    for(const v of st.vinculos){
+      const m = mm.get(v.molde_id); if(!m) continue;
+      (out[v.familia_id] = out[v.familia_id] || []).push({v, m});
+    }
+    return out;
+  },[st.moldes, st.vinculos]);
+
+  return {...st, nombre, byFamilia, reload, connect, disconnect, link, confirm, unlink, configured: !!P07_API};
+}
+
+function fmtFecha(iso){
+  if(!iso) return "";
+  const d = new Date(iso); const pad = n=>String(n).padStart(2,"0");
+  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${String(d.getFullYear()).slice(2)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function MoldeP07({family, p07}){
+  const [picking, setPicking] = useState(false);
+  const [q, setQ] = useState("");
+  const [claveIn, setClaveIn] = useState("");
+  const [nomIn, setNomIn] = useState(p07.nombre || "");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const admin = p07.rol === "admin";
+  const links = p07.byFamilia[family.id] || [];
+
+  const run = async (fn)=>{ setBusy(true); const e = await fn(); setErr(e||""); setBusy(false); return !e; };
+
+  const candidates = useMemo(()=>{
+    if(!picking) return [];
+    const nq = normTxt(q).trim();
+    const linkedIds = new Set(links.map(l=>l.m.id));
+    let list = p07.moldes.filter(m=>!linkedIds.has(m.id));
+    if(nq){
+      list = list.filter(m => normTxt([m.especificacion,m.cliente,m.n_control,m.posicion].join(" ")).includes(nq)).slice(0,40);
+    }else{
+      const fc = tokSet(family.cliente), fn = tokSet(family.nombre);
+      list = list.map(m=>{
+        const c = tokSet(m.cliente), e = tokSet(m.especificacion);
+        let sc = 0; c.forEach(t=>{ if(fc.has(t)) sc += 3; }); e.forEach(t=>{ if(fn.has(t)) sc += 2; });
+        return {m, sc};
+      }).filter(x=>x.sc>0).sort((a,b)=>b.sc-a.sc).slice(0,12).map(x=>x.m);
+    }
+    return list;
+  },[picking, q, p07.moldes, family.id, links.length]);
+
+  const abrirP07 = (m)=> P07_URL + "#q=" + encodeURIComponent(m.n_control || m.especificacion.split("\n")[0]);
+
+  let body;
+  if(!p07.configured){
+    body = <div className="molde-empty">La conexión con el P.07 todavía no está configurada (falta API_URL en config.js).</div>;
+  }else if(p07.estado === "sin_clave"){
+    body = (
+      <form className="molde-connect" onSubmit={async ev=>{ev.preventDefault(); await run(()=>p07.connect(claveIn, nomIn));}}>
+        <input type="password" placeholder="Clave del P.07" value={claveIn} onChange={e=>setClaveIn(e.target.value)} autoComplete="off" />
+        <input placeholder="Tu nombre" value={nomIn} onChange={e=>setNomIn(e.target.value)} />
+        <button className="pos-edit-btn" type="submit" disabled={busy}>Conectar</button>
+        {(err || p07.error) && <div className="molde-err">{err || p07.error}</div>}
+      </form>
+    );
+  }else if(p07.estado === "cargando"){
+    body = <div className="molde-empty">Consultando el P.07…</div>;
+  }else if(p07.estado === "error"){
+    body = <div className="molde-empty">{p07.error || "No se pudo consultar el P.07."} <button className="pos-edit-btn" onClick={()=>p07.reload()}>Reintentar</button></div>;
+  }else{
+    body = (
+      <React.Fragment>
+        {links.length === 0 && <div className="molde-empty">Esta ficha todavía no tiene un molde vinculado.</div>}
+        {links.map(({v,m})=>(
+          <div className="molde-item" key={m.id}>
+            <div className={"molde-pos" + (v.confirmado ? "" : " sug")}>{m.posicion || "—"}<small>UBICACIÓN</small></div>
+            <div className="molde-info">
+              <div className="esp">{m.especificacion}</div>
+              <div className="meta">Nº control {m.n_control || "—"} · {m.cliente || "sin cliente"}{m.estado ? " · " + m.estado : ""}{m.personal_para_mover ? " · personal p/ mover: " + m.personal_para_mover : ""}</div>
+              <div className="meta">Último movimiento: {m.actualizado_por} · {fmtFecha(m.actualizado_en)}</div>
+              <div>
+                {v.confirmado
+                  ? <span className="molde-tag ok">Vinculado</span>
+                  : <span className="molde-tag">Sugerido — falta confirmar</span>}
+              </div>
+              <div className="molde-actions">
+                <a className="pos-edit-btn" href={abrirP07(m)} target="_blank" rel="noopener" style={{textDecoration:"none"}}>Abrir en el P.07 para mover</a>
+                {admin && !v.confirmado && <button className="pos-edit-btn" disabled={busy} onClick={()=>run(()=>p07.confirm(family.id))}>Confirmar vínculo</button>}
+                {admin && <button className="pos-edit-btn" disabled={busy} onClick={()=>run(()=>p07.unlink(family.id, m.id))}>Desvincular</button>}
+              </div>
+            </div>
+          </div>
+        ))}
+        {admin && !picking && <div className="molde-actions"><button className="pos-edit-btn" onClick={()=>{setPicking(true);setQ("");}}>{links.length ? "+ Vincular otro molde" : "Vincular molde"}</button></div>}
+        {!admin && links.length === 0 && <div className="molde-empty" style={{paddingTop:0}}>El vínculo lo carga el administrador.</div>}
+        {admin && picking && (
+          <div className="molde-pick">
+            <input autoFocus placeholder="Buscar por especificación, cliente, Nº de control o posición" style={{width:"100%"}} value={q} onChange={e=>setQ(e.target.value)} />
+            <div className="molde-empty" style={{padding:"6px 0 0"}}>{q.trim() ? "Resultados de la búsqueda" : "Sugeridos según cliente y nombre del producto"}</div>
+            <div className="lst">
+              {candidates.length === 0 && <div className="molde-empty">Sin coincidencias. Probá buscando por cliente o Nº de control.</div>}
+              {candidates.map(m=>(
+                <button type="button" className="opt" key={m.id} disabled={busy} onClick={async ()=>{ if(await run(()=>p07.link(family.id, m.id))) setPicking(false); }}>
+                  <b>{m.posicion || "—"}</b>
+                  <span>{(m.especificacion||"").split("\n")[0]}<br/><span className="c">{m.cliente || "sin cliente"} · Nº control {m.n_control || "—"}</span></span>
+                </button>
+              ))}
+            </div>
+            <div className="molde-actions"><button className="pos-edit-btn" onClick={()=>setPicking(false)}>Cancelar</button></div>
+          </div>
+        )}
+        {err && <div className="molde-err">{err}</div>}
+      </React.Fragment>
+    );
+  }
+
+  return (
+    <div className="molde-box">
+      <div className="molde-head">
+        <span className="t">Molde y ubicación · P.07</span>
+        {p07.estado === "ok" && <span className="live"><i></i>en vivo · {p07.ultima ? fmtFecha(p07.ultima.toISOString()).slice(9) : ""} · <a href="#" onClick={e=>{e.preventDefault();p07.reload();}}>actualizar</a> · <a href="#" onClick={e=>{e.preventDefault();p07.disconnect();}}>salir</a></span>}
+        {p07.estado !== "ok" && p07.configured && <span className="live off"><i></i>sin conexión</span>}
+      </div>
+      {body}
+      {family.posicion && <div className="molde-empty" style={{paddingTop:6}}>Dato local anterior (cargado a mano en este navegador): {family.posicion}</div>}
+    </div>
+  );
+}
+
+function FichaModal({family, p07, onClose, onFieldSave, onDescSave, onVariantPhoto, onLogoUpload}){
+  const [activeVariant, setActiveVariant] = useState(0);
+  const variant = family.variantes[activeVariant] || family.variantes[0];
+  const descRef = useRef(null);
+  const photoInputRef = useRef(null);
+  const logoInputRef = useRef(null);
+
+  useEffect(()=>{
+    const onKey = e => { if(e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return ()=>window.removeEventListener("keydown", onKey);
+  },[onClose]);
+
+  const save = (field) => (val) => onFieldSave(family.id, field, val);
+
+  const handlePhotoPick = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    const dataUri = await resizeImageFile(file, 900, 0.82);
+    onVariantPhoto(family.id, variant.codigo, dataUri);
+    e.target.value = "";
+  };
+  const handleLogoPick = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    const dataUri = await resizeImageFile(file, 300, 0.9);
+    onLogoUpload(family.id, dataUri);
+    e.target.value = "";
+  };
+
+  return (
+    <div className="overlay" onClick={(e)=>{ if(e.target.classList.contains("overlay")) onClose(); }}>
+      <div className="ficha">
+        <button className="ficha-close" onClick={onClose}>✕</button>
+        <div className="ficha-hero">
+          <div className="ficha-hero-photo">
+            {variant.foto
+              ? <img src={resolveAsset(variant.foto)} alt={family.nombre} />
+              : <div className="noimg-lg">Sin foto todavía<br/>— pendiente de carga en planta —</div>}
+            <button className="photo-upload-btn" onClick={()=>photoInputRef.current.click()}>📷 {variant.foto ? "Cambiar foto" : "Tomar foto"}</button>
+            <input ref={photoInputRef} type="file" accept="image/*" capture="environment" style={{display:"none"}} onChange={handlePhotoPick} />
+          </div>
+          <div className="ficha-hero-side">
+            <div style={{position:"relative", width:120}}>
+              {family.logo
+                ? <div className="ficha-client-logo"><img src={resolveAsset(family.logo)} alt={family.cliente} /></div>
+                : <div className="ficha-client-logo"><span style={{fontSize:10,color:"#B4AF9F",textAlign:"center"}}>Sin logo</span></div>}
+              <button className="logo-edit-btn" title="Cargar logo del cliente" onClick={()=>logoInputRef.current.click()}>✎</button>
+              <input ref={logoInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleLogoPick} />
+            </div>
+            <div>
+              <div className="ficha-client-name">{family.cliente || "Cliente sin especificar"}</div>
+              <div className="ficha-name">{family.nombre}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="ficha-body">
+          <div className="id-row">
+            <div className="id-field">
+              <div className="id-label">Código del cliente</div>
+              <div className="id-value">{variant.codigoCliente || "-"}</div>
+            </div>
+            <div className="id-field">
+              <div className="id-label">Código Silver</div>
+              <div className="id-value">{variant.codigo || "-"}</div>
+            </div>
+          </div>
+
+          {family.variantes.length > 1 &&
+            <React.Fragment>
+              <div className="section-title">Colores / variantes ({family.variantes.length})</div>
+              <div className="variants-scroll">
+                {family.variantes.map((v, i) => (
+                  <div key={i} className={"variant-chip" + (i===activeVariant ? " active":"")} onClick={()=>setActiveVariant(i)}>
+                    <div className="variant-thumb">
+                      {v.foto ? <img src={resolveAsset(v.foto)} /> : <div className="dot"></div>}
+                    </div>
+                    <div className="variant-code">{v.codigo}</div>
+                    <div className="variant-color">{v.color || "—"}</div>
+                  </div>
+                ))}
+              </div>
+            </React.Fragment>
+          }
+
+          <div className="section-title">Ficha técnica</div>
+          <div className="core-grid">
+            <EditableField label="Material" value={family.material} onSave={save("material")} />
+            <EditableField label="Molde (dato de la planilla anterior)" value={family.molde} onSave={save("molde")} />
+            <EditableField label="Cavidades" value={family.cavidades} onSave={save("cavidades")} />
+            <EditableField label="Peso unitario (g, +2% scrap)" value={family.pesoUnitario} onSave={save("pesoUnitario")} />
+            <EditableField label="Tipo (AUTO/SEMI)" value={family.tipo} onSave={save("tipo")} />
+            <EditableField label="Ciclo (seg)" value={family.ciclo} onSave={save("ciclo")} />
+          </div>
+
+          <div className="core-grid" style={{marginTop:4}}>
+            <MoldeP07 family={family} p07={p07} />
+          </div>
+
+          <div className="section-title">Descripción del producto</div>
+          <div
+            className="desc-box"
+            contentEditable
+            suppressContentEditableWarning
+            data-ph="Sin descripción cargada — click para agregar"
+            ref={descRef}
+            onBlur={()=>onDescSave(family.id, descRef.current.innerText.trim())}
+          >{family.descripcion || ""}</div>
+
+          <details className="adicional">
+            <summary>Información adicional</summary>
+            <div className="adicional-grid">
+              <EditableField label="Medida de caja" value={family.medidaCaja} onSave={save("medidaCaja")} />
+              <EditableField label="Unid. x caja" value={family.unidXCaja} onSave={save("unidXCaja")} />
+              <EditableField label="Medida de bolsa" value={family.medidaBolsa} onSave={save("medidaBolsa")} />
+              <EditableField label="Unid. x bolsa" value={family.unidXBolsa} onSave={save("unidXBolsa")} />
+              <EditableField label="Tipo de dosificación" value={family.tipoDosificacion} onSave={save("tipoDosificacion")} />
+              <EditableField label="Código dosificación" value={family.codigoDosificacion} onSave={save("codigoDosificacion")} />
+              <EditableField label="Dosificación %" value={family.dosificacionPct} onSave={save("dosificacionPct")} />
+              <EditableField label="Gr x Kg" value={family.grXKg} onSave={save("grXKg")} />
+              <EditableField label="Gr x Bolsa" value={family.grXBolsa} onSave={save("grXBolsa")} />
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function QuickAddForm({onCreate, onCancel}){
+  const [nombre, setNombre] = useState("");
+  const [cliente, setCliente] = useState("");
+  const [material, setMaterial] = useState("");
+  const canSave = nombre.trim().length > 0;
+
+  return (
+    <div className="overlay" onClick={(e)=>{ if(e.target.classList.contains("overlay")) onCancel(); }}>
+      <div className="quick-form">
+        <h3>Alta rápida de producto</h3>
+        <p>Cargá lo mínimo ahora — podés completar el resto (foto, medidas, dosificación) después, desde la ficha.</p>
+        <label>Nombre del producto *</label>
+        <input autoFocus value={nombre} onChange={e=>setNombre(e.target.value)} placeholder="Ej: TAPA DECORATIVA" />
+        <label>Cliente</label>
+        <input value={cliente} onChange={e=>setCliente(e.target.value)} placeholder="Ej: Empresa nueva SA" />
+        <label>Material</label>
+        <input value={material} onChange={e=>setMaterial(e.target.value)} placeholder="Ej: PP natural" />
+        <div className="quick-form-actions">
+          <button className="btn-secondary" onClick={onCancel}>Cancelar</button>
+          <button
+            className="btn-primary"
+            disabled={!canSave}
+            onClick={()=>canSave && onCreate({nombre: nombre.trim(), cliente: cliente.trim(), material: material.trim()})}
+          >Crear ficha</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const NUEVOS_KEY = "fichaTecnicaSilver_nuevos_v1";
+function loadNuevos(){
+  try{ return JSON.parse(localStorage.getItem(NUEVOS_KEY) || "[]"); }catch(e){ return []; }
+}
+function saveNuevos(list){
+  try{ localStorage.setItem(NUEVOS_KEY, JSON.stringify(list)); }catch(e){}
+}
+
+function App(){
+  const [overrides, setOverrides] = useState(loadOverrides());
+  const [nuevos, setNuevos] = useState(loadNuevos());
+  const [query, setQuery] = useState("");
+  const [clientFilter, setClientFilter] = useState("");
+  const [openId, setOpenId] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const p07 = useP07();
+
+  const families = useMemo(()=>{
+    const base = window.FICHA_DATA.map(f => mergeFamily(f, overrides));
+    const extra = nuevos.map(f => mergeFamily(f, overrides));
+    return [...extra, ...base];
+  },[overrides, nuevos]);
+
+  const clients = useMemo(()=>{
+    const s = new Set(families.map(f=>f.cliente).filter(Boolean));
+    return Array.from(s).sort((a,b)=>a.localeCompare(b));
+  },[families]);
+
+  const filtered = useMemo(()=>{
+    const q = query.trim().toLowerCase();
+    return families.filter(f=>{
+      if(clientFilter && f.cliente !== clientFilter) return false;
+      if(!q) return true;
+      return f.nombre.toLowerCase().includes(q)
+        || (f.cliente||"").toLowerCase().includes(q)
+        || f.variantes.some(v => (v.codigo||"").toLowerCase().includes(q) || (v.codigoCliente||"").toLowerCase().includes(q));
+    });
+  },[families, query, clientFilter]);
+
+  const openFamily = families.find(f=>f.id===openId);
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(()=>setToast(null), 1800);
+  };
+
+  const updateOverride = (id, patch) => {
+    setOverrides(prev=>{
+      const next = {...prev, [id]: {...(prev[id]||{}), ...patch}};
+      saveOverrides(next);
+      return next;
+    });
+  };
+
+  const onFieldSave = (id, field, val) => {
+    updateOverride(id, {[field]: val});
+    showToast("Guardado");
+  };
+  const onDescSave = (id, val) => {
+    updateOverride(id, {descripcion: val});
+    showToast("Descripción guardada");
+  };
+  const onVariantPhoto = (id, codigo, dataUri) => {
+    setOverrides(prev=>{
+      const current = prev[id] || {};
+      const variantFotos = {...(current.variantFotos||{}), [codigo]: dataUri};
+      const next = {...prev, [id]: {...current, variantFotos}};
+      saveOverrides(next);
+      return next;
+    });
+    showToast("Foto guardada");
+  };
+  const onLogoUpload = (id, dataUri) => {
+    updateOverride(id, {logo: dataUri});
+    showToast("Logo actualizado");
+  };
+
+  const handleQuickCreate = ({nombre, cliente, material}) => {
+    const id = "N" + Date.now();
+    const nueva = {
+      id, nombre, cliente, logo: null, material,
+      molde:"", cavidades:"", pesoUnitario:"", tipo:"", ciclo:"",
+      medidaCaja:"", unidXCaja:"", medidaBolsa:"", unidXBolsa:"",
+      tipoDosificacion:"", codigoDosificacion:"", dosificacionPct:"", grXKg:"", grXBolsa:"",
+      inserto:"", observaciones:"", descripcion:"", posicion:"",
+      variantes:[{codigo:"-", codigoCliente:"-", color:"", foto:null}],
+    };
+    setNuevos(prev=>{
+      const next = [nueva, ...prev];
+      saveNuevos(next);
+      return next;
+    });
+    setQuickAddOpen(false);
+    setOpenId(id);
+    showToast("Ficha creada — completala cuando quieras");
+  };
+
+  return (
+    <React.Fragment>
+      <div className="topbar">
+        <div className="header-logos">
+          <div className="header-logo-badge"><img src={resolveAsset("silver-logo.png")} alt="Silver Industrial" /></div>
+          <div className="header-logo-badge"><img src={resolveAsset("iso-badge.png")} alt="Certified ISO 9001:2015 Bureau Veritas" /></div>
+        </div>
+        <div className="brand">Ficha Técnica <small>Silver Industrial</small></div>
+        <div className="search-wrap">
+          <input
+            className="search-input"
+            placeholder="Buscar por nombre, código o cliente..."
+            value={query}
+            onChange={e=>setQuery(e.target.value)}
+          />
+          <select className="client-filter" value={clientFilter} onChange={e=>setClientFilter(e.target.value)}>
+            <option value="">Todos los clientes</option>
+            {clients.map(c=><option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div className="count-pill">{filtered.length} de {families.length}</div>
+        <button className="quick-add-btn" onClick={()=>setQuickAddOpen(true)}>+ Alta rápida</button>
+        <div className="header-identity">
+          <div className="name">Mgter. Diego Ortiz</div>
+          <div className="role">Consultor ISO · +54 9 11 4170-6692</div>
+        </div>
+      </div>
+
+      <div className="container">
+        {filtered.length === 0
+          ? <div className="empty-state">No se encontraron productos con ese criterio.</div>
+          : <div className="grid">
+              {filtered.map(f=>{
+                const withPhoto = f.variantes.find(v=>v.foto);
+                return (
+                  <div className="card" key={f.id} onClick={()=>setOpenId(f.id)}>
+                    <div className="card-photo">
+                      {withPhoto
+                        ? <img src={resolveAsset(withPhoto.foto)} alt={f.nombre} />
+                        : <div className="noimg">Sin foto</div>}
+                      {f.logo && <div className="logo-badge"><img src={resolveAsset(f.logo)} /></div>}
+                    </div>
+                    <div className="card-body">
+                      <p className="card-title">{f.nombre}</p>
+                      <p className="card-client">{f.cliente || "Sin cliente"}</p>
+                      <div className="card-meta">
+                        {f.material ? f.material : "Material sin cargar"}
+                      </div>
+                      {f.variantes.length > 1 &&
+                        <span className="variant-count">{f.variantes.length} variantes</span>}
+                      {(p07.byFamilia[f.id]||[]).length > 0 &&
+                        <div><span className={"pos-chip" + (p07.byFamilia[f.id].every(l=>l.v.confirmado) ? "" : " sug")} title={p07.byFamilia[f.id].every(l=>l.v.confirmado) ? "Ubicación en el P.07" : "Ubicación sugerida: falta confirmar el vínculo"}>
+                          Ubic. {Array.from(new Set(p07.byFamilia[f.id].map(l=>l.m.posicion))).join(" · ")}
+                        </span></div>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>}
+      </div>
+
+      {openFamily &&
+        <FichaModal
+          family={openFamily}
+          p07={p07}
+          onClose={()=>setOpenId(null)}
+          onFieldSave={onFieldSave}
+          onDescSave={onDescSave}
+          onVariantPhoto={onVariantPhoto}
+          onLogoUpload={onLogoUpload}
+        />}
+
+      {quickAddOpen &&
+        <QuickAddForm onCreate={handleQuickCreate} onCancel={()=>setQuickAddOpen(false)} />}
+
+      <div className="credit">Desarrollado por Mgter. Diego Ortiz — Líder de Mejora Continua | Consultor ISO</div>
+
+      {toast && <div className="toast">{toast}</div>}
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+<script>
+  window.addEventListener("error", function(e){
+    var root = document.getElementById("root");
+    if(root && !root.innerHTML.trim()){
+      root.innerHTML = '<div style="padding:40px;font-family:sans-serif;color:#5B6270;max-width:600px;margin:0 auto;">' +
+        '<h2 style="color:#1B1F27;">No se pudo cargar la ficha técnica</h2>' +
+        '<p>Hubo un error al iniciar la app: <code>' + (e.message||'error desconocido') + '</code></p>' +
+        '<p>Probá abrirlo desde GitHub Pages en vez de local, o avisale a Diego con este mensaje.</p></div>';
+    }
+  });
+</script>
+</body>
+</html>
